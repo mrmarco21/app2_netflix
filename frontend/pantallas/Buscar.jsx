@@ -4,6 +4,7 @@ import {
   StyleSheet,
   StatusBar,
   ScrollView,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import NavegacionInferior from '../componentes/NavegacionInferior';
@@ -41,6 +42,21 @@ export default function Buscar({ navigation }) {
     'Acción', 'Aventura', 'Anime', 'Comedias', 'Documentales', 
     'Dramas', 'Fantasía', 'Horror', 'Romance', 'Ciencia Ficción'
   ];
+
+  // Controla el botón de atrás del dispositivo
+  useEffect(() => {
+    const backAction = () => {
+      navigation.goBack();
+      return true; // Previene el comportamiento por defecto
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove(); // Limpia el listener al desmontar
+  }, [navigation]);
 
   // Cargar datos iniciales
   useEffect(() => {

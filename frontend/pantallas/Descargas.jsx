@@ -3,10 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  StatusBar,
   ScrollView,
   TouchableOpacity,
   Image,
+  StatusBar,
+  BackHandler,
   FlatList,
   Alert,
 } from 'react-native';
@@ -22,6 +23,21 @@ export default function Descargas({ navigation }) {
     soloWiFi: true,
     descargasInteligentes: true,
   });
+
+  // Controla el botón de atrás del dispositivo
+  useEffect(() => {
+    const backAction = () => {
+      navigation.goBack();
+      return true; // Previene el comportamiento por defecto
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove(); // Limpia el listener al desmontar
+  }, [navigation]);
 
   // Datos de ejemplo para descargas
   const ejemploDescargas = [

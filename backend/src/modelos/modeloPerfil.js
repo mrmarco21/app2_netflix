@@ -42,6 +42,51 @@ export const actualizarPerfil = async (id, nombre) => {
   }
 };
 
+// Actualizar PIN de un perfil
+export const actualizarPinPerfil = async (id, pin) => {
+  try {
+    const [resultado] = await pool.execute(
+      "UPDATE perfiles SET pin = ? WHERE id = ?",
+      [pin, id]
+    );
+    return resultado;
+  } catch (error) {
+    console.error("Error al actualizar PIN del perfil:", error);
+    throw error;
+  }
+};
+
+// Verificar PIN de un perfil
+export const verificarPinPerfil = async (id, pin) => {
+  try {
+    const [perfiles] = await pool.execute(
+      "SELECT pin FROM perfiles WHERE id = ?",
+      [id]
+    );
+    
+    if (perfiles.length === 0) {
+      return { valido: false, mensaje: 'Perfil no encontrado' };
+    }
+    
+    const perfilPin = perfiles[0].pin;
+    
+    // Si el perfil no tiene PIN configurado, permitir acceso
+    if (!perfilPin) {
+      return { valido: true, mensaje: 'Perfil sin PIN' };
+    }
+    
+    // Verificar si el PIN coincide
+    if (perfilPin === pin) {
+      return { valido: true, mensaje: 'PIN correcto' };
+    } else {
+      return { valido: false, mensaje: 'PIN incorrecto' };
+    }
+  } catch (error) {
+    console.error("Error al verificar PIN del perfil:", error);
+    throw error;
+  }
+};
+
 // Eliminar un perfil
 export const eliminarPerfil = async (id) => {
   try {

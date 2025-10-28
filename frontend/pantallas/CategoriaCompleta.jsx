@@ -8,6 +8,7 @@ import {
   Image,
   StatusBar,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,6 +33,21 @@ export default function CategoriaCompleta({ route }) {
   const [pagina, setPagina] = useState(1);
   const [cargandoMas, setCargandoMas] = useState(false);
   const [hayMasPaginas, setHayMasPaginas] = useState(true);
+
+  // Controla el botón de atrás del dispositivo
+  useEffect(() => {
+    const backAction = () => {
+      navigation.goBack();
+      return true; // Previene el comportamiento por defecto
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove(); // Limpia el listener al desmontar
+  }, [navigation]);
 
   // Mapeo de géneros para películas (IDs de TMDB)
   const generosPeliculas = {

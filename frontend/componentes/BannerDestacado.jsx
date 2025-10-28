@@ -9,9 +9,8 @@ export default function BannerDestacado({ contenidoDestacado, onAgregarAMiLista 
   const navigation = useNavigation();
   
   const handleMiLista = () => {
-    const estaEnLista = estaEnMiLista(contenidoDestacado.id);
-    if (onAgregarAMiLista) {
-      onAgregarAMiLista(contenidoDestacado, !estaEnLista);
+    if (onAgregarAMiLista && contenidoDestacado) {
+      onAgregarAMiLista(contenidoDestacado);
     }
   };
 
@@ -67,8 +66,6 @@ const styles = StyleSheet.create({
     height: 400,
     position: 'relative',
     paddingHorizontal: 10,
-    borderWidth: 2,
-    borderColor: 'white'
   },
   bannerImagen: {
     width: '100%',

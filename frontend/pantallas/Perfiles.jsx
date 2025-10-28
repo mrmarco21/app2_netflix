@@ -18,8 +18,11 @@ import {
   obtenerPerfilesPorUsuario, 
   crearPerfil, 
   actualizarPerfil, 
-  eliminarPerfil 
+  eliminarPerfil,
+  actualizarPinPerfil
 } from '../servicios/apiUsuarios';
+import ModalPinPerfil from '../componentes/ModalPinPerfil';
+import ModalAdministrarPerfiles from '../componentes/ModalAdministrarPerfiles';
 
 export default function Perfiles({ navigation, route }) {
   const [perfiles, setPerfiles] = useState([]);
@@ -28,6 +31,9 @@ export default function Perfiles({ navigation, route }) {
   const [modalEdicion, setModalEdicion] = useState(false);
   const [nombrePerfil, setNombrePerfil] = useState("");
   const [perfilEditando, setPerfilEditando] = useState(null);
+  const [modalPinVisible, setModalPinVisible] = useState(false);
+  const [perfilConPin, setPerfilConPin] = useState(null);
+  const [modalAdministrarVisible, setModalAdministrarVisible] = useState(false);
   
   // Obtener el ID del usuario desde los parámetros de navegación o desde el login
   const { usuario } = route.params || {};
@@ -178,11 +184,84 @@ export default function Perfiles({ navigation, route }) {
   };
 
   const seleccionarPerfil = (perfil) => {
+    // Verificar si el perfil tiene PIN
+    if (perfil.pin) {
+      setPerfilConPin(perfil);
+      setModalPinVisible(true);
+    } else {
+      // Navegar directamente si no tiene PIN
+      navigation.navigate('InicioApp', { 
+        perfil: perfil,
+        idUsuario: idUsuario 
+      });
+    }
+  };
+
+  const manejarAccesoPermitido = (perfil) => {
+    setModalPinVisible(false);
+    setPerfilConPin(null);
     // Navegar a la pantalla principal de la app con los datos del perfil
     navigation.navigate('InicioApp', { 
       perfil: perfil,
       idUsuario: idUsuario 
     });
+  };
+
+  const cerrarModalPin = () => {
+    setModalPinVisible(false);
+    setPerfilConPin(null);
+  };
+
+  // Funciones para el modal de administrar perfiles
+  const manejarActualizarPin = async (perfilId, pin) => {
+    try {
+      const resultado = await actualizarPinPerfil(perfilId, pin);
+      if (resultado.success) {
+        Alert.alert('Éxito', 'PIN actualizado exitosamente');
+        cargarPerfiles(); // Recargar perfiles para mostrar cambios
+        return true;
+      } else {
+        Alert.alert('Error', resultado.mensaje);
+        return false;
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo actualizar el PIN');
+      return false;
+    }
+  };
+
+  const manejarEditarPerfilAdmin = async (perfil) => {
+    try {
+      const resultado = await actualizarPerfil(perfil.id, perfil.nombre);
+      if (resultado.success) {
+        Alert.alert('Éxito', 'Perfil actualizado exitosamente');
+        cargarPerfiles();
+        return true;
+      } else {
+        Alert.alert('Error', resultado.mensaje);
+        return false;
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo actualizar el perfil');
+      return false;
+    }
+  };
+
+  const manejarEliminarPerfilAdmin = async (perfil) => {
+    try {
+      const resultado = await eliminarPerfil(perfil.id);
+      if (resultado.success) {
+        Alert.alert('Éxito', 'Perfil eliminado exitosamente');
+        cargarPerfiles();
+        return true;
+      } else {
+        Alert.alert('Error', resultado.mensaje);
+        return false;
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo eliminar el perfil');
+      return false;
+    }
   };
 
   if (cargando) {
@@ -202,13 +281,7 @@ export default function Perfiles({ navigation, route }) {
       <LinearGradient colors={['#b8b8b86a', '#1a1a1a', '#000000']} style={estilos.gradient}>
         {/* Header */}
         <View style={estilos.header}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Login')}
-            style={estilos.botonAtras}
-          >
-            <Ionicons name="arrow-back" size={25} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={estilos.nombreApp}>Perfiles</Text>
+          <Text style={estilos.nombreApp}>MI NETFLIX</Text>
         </View>
 
         <ScrollView style={estilos.contenedorPrincipal} showsVerticalScrollIndicator={false}>
@@ -265,7 +338,10 @@ export default function Perfiles({ navigation, route }) {
           </View>
 
           {/* Botón de administrar perfiles */}
-          <TouchableOpacity style={estilos.botonAdministrar}>
+          <TouchableOpacity 
+            style={estilos.botonAdministrar}
+            onPress={() => setModalAdministrarVisible(true)}
+          >
             <Text style={estilos.textoAdministrar}>Administrar perfiles</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -354,6 +430,24 @@ export default function Perfiles({ navigation, route }) {
             </View>
           </View>
         </Modal>
+
+        {/* Modal para verificar PIN */}
+        <ModalPinPerfil
+          visible={modalPinVisible}
+          perfil={perfilConPin}
+          onCerrar={cerrarModalPin}
+          onAccesoPermitido={manejarAccesoPermitido}
+        />
+
+        {/* Modal para administrar perfiles */}
+        <ModalAdministrarPerfiles
+          visible={modalAdministrarVisible}
+          perfiles={perfiles}
+          onCerrar={() => setModalAdministrarVisible(false)}
+          onActualizarPin={manejarActualizarPin}
+          onEditarPerfil={manejarEditarPerfilAdmin}
+          onEliminarPerfil={manejarEliminarPerfilAdmin}
+        />
       </LinearGradient>
     </SafeAreaView>
   );
@@ -362,7 +456,6 @@ export default function Perfiles({ navigation, route }) {
 const estilos = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   gradient: {
     flex: 1,
@@ -370,17 +463,15 @@ const estilos = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 25,
     paddingVertical: 15,
   },
-  botonAtras: {
-    padding: 10,
-    marginRight: 10,
-  },
   nombreApp: {
-    color: "red",
-    fontSize: 26,
+    color: "#E50914",
+    fontSize: 30,
     fontWeight: "bold",
+    letterSpacing: 1,
   },
   contenedorPrincipal: {
     flex: 1,
@@ -397,10 +488,13 @@ const estilos = StyleSheet.create({
   },
   titulo: {
     color: '#ffffff',
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginVertical: 30,
+    marginVertical: 40,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: {width: -1, height: 1},
+    textShadowRadius: 10
   },
   gridPerfiles: {
     flexDirection: 'row',
@@ -414,18 +508,46 @@ const estilos = StyleSheet.create({
   },
   perfilItem: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 30,
+    padding: 15,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    // shadowOffset: {
+    //   width: 0,
+    //   height: 4,
+    // },
+    // shadowOpacity: 0.3,
+    // shadowRadius: 8,
+    // elevation: 8,
   },
   imagenPerfil: {
-    width: 120,
-    height: 120,
-    borderRadius: 8,
-    marginBottom: 10,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 15,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   nombrePerfilItem: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
     textAlign: 'center',
+    marginTop: 5,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: {width: 0, height: 1},
+    textShadowRadius: 2,
     maxWidth: 120,
   },
   botonesAccion: {
@@ -460,17 +582,31 @@ const estilos = StyleSheet.create({
   },
   botonAdministrar: {
     alignSelf: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderWidth: 1,
-    borderColor: '#ffffff',
-    borderRadius: 4,
-    marginTop: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 25,
+    marginTop: 40,
     marginBottom: 40,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
   textoAdministrar: {
     color: '#ffffff',
     fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: {width: 0, height: 1},
+    textShadowRadius: 2
   },
   modalOverlay: {
     flex: 1,

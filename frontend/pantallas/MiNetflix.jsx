@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, StatusBar, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, StatusBar, ScrollView, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMiLista } from '../contextos/MiListaContext';
 import { useUsuario } from '../contextos/UsuarioContext';
@@ -8,14 +8,32 @@ import PerfilActual from '../componentes/PerfilActual';
 import ListaFavoritos from '../componentes/ListaFavoritos';
 import ModalPerfiles from '../componentes/ModalPerfiles';
 import ModalConfiguracion from '../componentes/ModalConfiguracion';
+import ModalPinPerfil from '../componentes/ModalPinPerfil';
 import NavegacionInferior from '../componentes/NavegacionInferior';
 
 export default function MiNetflix({ navigation }) {
   const [modalPerfilesVisible, setModalPerfilesVisible] = useState(false);
   const [modalConfigVisible, setModalConfigVisible] = useState(false);
+  const [modalPinVisible, setModalPinVisible] = useState(false);
+  const [perfilConPin, setPerfilConPin] = useState(null);
 
-  const { miLista, quitarDeMiLista } = useMiLista();
-  const { perfilActual, perfilesDisponibles, cambiarPerfil } = useUsuario();
+  const { miLista, quitarDeMiLista, cargando } = useMiLista();
+  const { perfilActual, perfilesDisponibles, cambiarPerfil, cargarPerfilesDisponibles, cerrarSesion, usuario } = useUsuario();
+
+  // Controla el botón de atrás del dispositivo
+  useEffect(() => {
+    const backAction = () => {
+      navigation.goBack();
+      return true; // Previene el comportamiento por defecto
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove(); // Limpia el listener al desmontar
+  }, [navigation]);
 
   // Imágenes de perfil disponibles
   const imagenesPerfiles = [
@@ -41,47 +59,41 @@ export default function MiNetflix({ navigation }) {
     avatar: obtenerImagenPerfil(perfil.id)
   }));
 
-  // Datos de ejemplo para contenido favorito
-  const contenidoFavorito = [
-    {
-      id: 1,
-      titulo: 'Rápidos y Furiosos 8',
-      imagen: require('../assets/imgFondo1.jpg'),
-      tipo: 'película',
-      fechaAgregado: '2024-01-15'
-    },
-    {
-      id: 2,
-      titulo: 'Stranger Things',
-      imagen: require('../assets/imgFondo2.jpg'),
-      tipo: 'serie',
-      fechaAgregado: '2024-01-10'
-    },
-    {
-      id: 3,
-      titulo: 'The Witcher',
-      imagen: require('../assets/imgFondo3.jpg'),
-      tipo: 'serie',
-      fechaAgregado: '2024-01-08'
-    },
-    {
-      id: 4,
-      titulo: 'Extraction',
-      imagen: require('../assets/imgFondo4.jpg'),
-      tipo: 'película',
-      fechaAgregado: '2024-01-05'
-    }
-  ];
+  // Datos de ejemplo para contenido favorito - REMOVIDO
+  // Ahora usamos miLista del contexto que viene del backend
 
   const handleCambiarPerfil = async (perfil) => {
-    await cambiarPerfil(perfil);
-    setModalPerfilesVisible(false);
+    // Verificar si el perfil tiene PIN
+    if (perfil.pin) {
+      setPerfilConPin(perfil);
+      setModalPinVisible(true);
+      setModalPerfilesVisible(false);
+    } else {
+      await cambiarPerfil(perfil);
+      setModalPerfilesVisible(false);
+    }
   };
 
-  const handleCerrarSesion = () => {
+  const manejarAccesoPermitido = async () => {
+    if (perfilConPin) {
+      await cambiarPerfil(perfilConPin);
+      setModalPinVisible(false);
+      setPerfilConPin(null);
+    }
+  };
+
+  const cerrarModalPin = () => {
+    setModalPinVisible(false);
+    setPerfilConPin(null);
+  };
+
+  const handleCerrarSesion = async () => {
     setModalConfigVisible(false);
-    // Aquí iría la lógica para cerrar sesión
-    navigation.navigate('Login');
+    await cerrarSesion();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'NetflixIntro' }],
+    });
   };
 
   return (
@@ -153,7 +165,8 @@ export default function MiNetflix({ navigation }) {
         <ListaFavoritos 
           contenido={miLista}
           navigation={navigation}
-          onEliminar={quitarDeMiLista}
+          onEliminar={(contenidoId) => quitarDeMiLista(contenidoId)}
+          cargando={cargando}
         />
       </ScrollView>
       
@@ -165,6 +178,7 @@ export default function MiNetflix({ navigation }) {
         perfilActual={perfilActual}
         onCerrar={() => setModalPerfilesVisible(false)}
         onSeleccionar={handleCambiarPerfil}
+        onActualizarPerfiles={() => cargarPerfilesDisponibles(usuario?.id)}
       />
       
       <ModalConfiguracion
@@ -172,6 +186,13 @@ export default function MiNetflix({ navigation }) {
         onCerrar={() => setModalConfigVisible(false)}
         onCerrarSesion={handleCerrarSesion}
         navigation={navigation}
+      />
+
+      <ModalPinPerfil
+        visible={modalPinVisible}
+        perfil={perfilConPin}
+        onCerrar={cerrarModalPin}
+        onAccesoPermitido={manejarAccesoPermitido}
       />
     </SafeAreaView>
   );

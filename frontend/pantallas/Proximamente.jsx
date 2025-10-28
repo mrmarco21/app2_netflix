@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   FlatList,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -117,6 +118,21 @@ export default function Proximamente({ navigation }) {
   useEffect(() => {
     cargarPeliculasProximamente();
   }, []);
+
+  // Controla el botón de atrás del dispositivo
+  useEffect(() => {
+    const backAction = () => {
+      navigation.goBack();
+      return true; // Previene el comportamiento por defecto
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove(); // Limpia el listener al desmontar
+  }, [navigation]);
 
   const toggleNotificacion = (id) => {
     const nuevasNotificaciones = new Set(notificacionesActivas);

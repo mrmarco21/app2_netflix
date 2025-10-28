@@ -1,4 +1,4 @@
-// Configuración base de la API
+// URL base de la API
 const API_BASE_URL = "http://192.168.18.31:3000";
 
 // Función para registrar un nuevo usuario
@@ -26,6 +26,66 @@ export const registrarUsuario = async (nombres, correo, contrasena) => {
       success: true,
       data: data,
       mensaje: data.mensaje || "Usuario registrado exitosamente",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      mensaje: error.message || "Error de conexión",
+    };
+  }
+};
+
+// Función para actualizar el PIN de un perfil
+export const actualizarPinPerfil = async (perfilId, pin) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/perfiles/${perfilId}/pin`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ pin }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.mensaje || "Error al actualizar PIN");
+    }
+
+    return {
+      success: true,
+      data: data,
+      mensaje: data.mensaje || "PIN actualizado exitosamente",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      mensaje: error.message || "Error de conexión",
+    };
+  }
+};
+
+// Función para verificar el PIN de un perfil
+export const verificarPinPerfil = async (perfilId, pin) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/perfiles/${perfilId}/verificar-pin`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ pin }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.mensaje || "Error al verificar PIN");
+    }
+
+    return {
+      success: true,
+      data: data,
+      mensaje: data.mensaje || "PIN verificado exitosamente",
     };
   } catch (error) {
     return {

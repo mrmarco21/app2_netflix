@@ -6,10 +6,12 @@ import {
   ScrollView,
   StatusBar,
   ActivityIndicator,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMiLista } from '../contextos/MiListaContext';
 import { useUsuario } from '../contextos/UsuarioContext';
+import ModalPinPerfil from '../componentes/ModalPinPerfil';
 
 // Servicios TMDB
 import {
@@ -35,9 +37,18 @@ export default function InicioApp({ navigation, route }) {
   const [continuarViendo, setContinuarViendo] = useState([]);
   const [secciones, setSecciones] = useState([]);
   const [cargando, setCargando] = useState(false);
-  
+  const [modalPinVisible, setModalPinVisible] = useState(false);
+
   const { toggleMiLista } = useMiLista();
-  const { establecerUsuario, establecerPerfilActual } = useUsuario();
+  const { 
+    establecerUsuario, 
+    establecerPerfilActual, 
+    perfilActual,
+    requiereVerificacionPin,
+    actualizarActividad,
+    verificarInactividad,
+    solicitarVerificacionPin
+  } = useUsuario();
 
   // Mapeo de géneros para películas (IDs de TMDB)
   const generosPeliculas = {
@@ -68,6 +79,58 @@ export default function InicioApp({ navigation, route }) {
       establecerPerfilActual(perfil);
     }
   }, [idUsuario, perfil]);
+
+  // Manejar verificación de PIN cuando se requiere
+  useEffect(() => {
+    if (requiereVerificacionPin && perfilActual?.pin) {
+      setModalPinVisible(true);
+    }
+  }, [requiereVerificacionPin, perfilActual]);
+
+  // Manejar cambios en el estado de la aplicación
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      console.log('📱 Estado de la app cambió a:', nextAppState);
+      
+      if (nextAppState === 'active') {
+        console.log('🔄 App volvió a estar activa, verificando inactividad...');
+        // La app volvió a estar activa, verificar si necesita PIN
+        if (verificarInactividad()) {
+          console.log('✅ Se requiere PIN, mostrando modal');
+          setModalPinVisible(true);
+        } else {
+          console.log('❌ No se requiere PIN');
+        }
+      } else if (nextAppState === 'background' || nextAppState === 'inactive') {
+        console.log('⏸️ App se fue al fondo, actualizando tiempo de actividad');
+        // La app se fue al fondo, actualizar tiempo de actividad
+        actualizarActividad();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [verificarInactividad, actualizarActividad]);
+
+  // Actualizar actividad en interacciones del usuario
+  const manejarInteraccionUsuario = () => {
+    actualizarActividad();
+  };
+
+  // Manejar acceso permitido después de verificar PIN
+  const manejarAccesoPermitido = () => {
+    setModalPinVisible(false);
+    actualizarActividad();
+  };
+
+  // Manejar cierre del modal de PIN
+  const cerrarModalPin = () => {
+    setModalPinVisible(false);
+    // Si se cierra sin verificar, solicitar verificación nuevamente
+    if (requiereVerificacionPin) {
+      solicitarVerificacionPin();
+    }
+  };
 
   // Función para cargar contenido según el filtro activo
   const cargarContenido = async (filtro) => {
@@ -269,7 +332,7 @@ export default function InicioApp({ navigation, route }) {
       } else if (filtro === 'Películas') {
         // Cargar múltiples categorías de películas
         const peliculasPopulares = await obtenerPeliculasPopulares();
-        
+
         if (peliculasPopulares.results && peliculasPopulares.results.length > 0) {
           const destacada = peliculasPopulares.results[0];
           nuevoContenidoDestacado = {
@@ -284,7 +347,7 @@ export default function InicioApp({ navigation, route }) {
 
         // Cargar múltiples categorías de películas
         nuevasSecciones = [];
-        
+
         // Películas Populares
         if (peliculasPopulares.results) {
           nuevasSecciones.push({
@@ -321,7 +384,7 @@ export default function InicioApp({ navigation, route }) {
       } else if (filtro === 'Series') {
         // Cargar múltiples categorías de series
         const seriesPopulares = await obtenerSeriesPopulares();
-        
+
         if (seriesPopulares.results && seriesPopulares.results.length > 0) {
           const destacada = seriesPopulares.results[0];
           nuevoContenidoDestacado = {
@@ -336,7 +399,7 @@ export default function InicioApp({ navigation, route }) {
 
         // Cargar múltiples categorías de series
         nuevasSecciones = [];
-        
+
         // Series Populares
         if (seriesPopulares.results) {
           nuevasSecciones.push({
@@ -373,7 +436,7 @@ export default function InicioApp({ navigation, route }) {
       } else if (generosPeliculas[filtro]) {
         // Cargar películas por género
         const peliculasPorGenero = await obtenerPeliculasPorGenero(generosPeliculas[filtro]);
-        
+
         if (peliculasPorGenero.results && peliculasPorGenero.results.length > 0) {
           const destacada = peliculasPorGenero.results[0];
           nuevoContenidoDestacado = {
@@ -399,7 +462,7 @@ export default function InicioApp({ navigation, route }) {
       } else if (generosSeries[filtro]) {
         // Cargar series por género
         const seriesPorGenero = await obtenerSeriesPorGenero(generosSeries[filtro]);
-        
+
         if (seriesPorGenero.results && seriesPorGenero.results.length > 0) {
           const destacada = seriesPorGenero.results[0];
           nuevoContenidoDestacado = {
@@ -481,7 +544,7 @@ export default function InicioApp({ navigation, route }) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={{ color: '#FFFFFF', fontSize: 18 }}>Cargando contenido...</Text>
-        <ActivityIndicator size="large" color="#E50914" /> 
+        <ActivityIndicator size="large" color="#E50914" />
       </View>
     );
   }
@@ -489,27 +552,31 @@ export default function InicioApp({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor="#000" translucent={false} />
-      
-      <HeaderInicio 
-        filtroActivo={filtroActivo} 
+
+      <HeaderInicio
+        filtroActivo={filtroActivo}
         onPressBuscar={() => navigation.navigate('Buscar')}
       />
 
-      <FiltrosInicio 
+      <FiltrosInicio
         filtroActivo={filtroActivo}
         setFiltroActivo={setFiltroActivo}
         setModalVisible={setModalVisible}
       />
 
-      <ScrollView style={styles.scrollContainer}>
-        <BannerDestacado 
-          contenidoDestacado={contenidoDestacado} 
+      <ScrollView 
+        style={styles.scrollContainer}
+        onTouchStart={manejarInteraccionUsuario}
+        onScrollBeginDrag={manejarInteraccionUsuario}
+      >
+        <BannerDestacado
+          contenidoDestacado={contenidoDestacado}
           onAgregarAMiLista={toggleMiLista}
         />
 
         {continuarViendo.length > 0 && (
-          <SeccionContenido 
-            titulo="Continuar viendo" 
+          <SeccionContenido
+            titulo="Continuar viendo"
             contenido={continuarViendo}
             esContinuarViendo={true}
             onAgregarAMiLista={toggleMiLista}
@@ -517,7 +584,7 @@ export default function InicioApp({ navigation, route }) {
         )}
 
         {secciones.map((seccion, index) => (
-          <SeccionContenido 
+          <SeccionContenido
             key={index}
             titulo={seccion.titulo}
             contenido={seccion.contenido}
@@ -529,12 +596,19 @@ export default function InicioApp({ navigation, route }) {
 
       <NavegacionInferior navigation={navigation} activeTab="Inicio" />
 
-      <ModalCategorias 
+      <ModalCategorias
         modalVisible={modalVisible}
         setModalVisible={setModalVisible}
         categorias={categorias}
         setFiltroActivo={setFiltroActivo}
         filtroActivo={filtroActivo}
+      />
+
+      <ModalPinPerfil
+        visible={modalPinVisible}
+        perfil={perfilActual}
+        onAccesoPermitido={manejarAccesoPermitido}
+        onCerrar={cerrarModalPin}
       />
     </SafeAreaView>
   );

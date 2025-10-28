@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { obtenerPerfilesPorUsuario } from '../servicios/apiUsuarios';
 
 // Crear el contexto
@@ -19,10 +20,54 @@ export const UsuarioProvider = ({ children }) => {
   const [perfilActual, setPerfilActual] = useState(null);
   const [perfilesDisponibles, setPerfilesDisponibles] = useState([]);
   const [cargandoPerfiles, setCargandoPerfiles] = useState(false);
+  const [requiereVerificacionPin, setRequiereVerificacionPin] = useState(false);
+  const [tiempoUltimaActividad, setTiempoUltimaActividad] = useState(Date.now());
+  const [sesionIniciada, setSesionIniciada] = useState(false);
+
+  // Función para guardar sesión en AsyncStorage
+  const guardarSesion = async (datosUsuario) => {
+    try {
+      await AsyncStorage.setItem('sesionUsuario', JSON.stringify(datosUsuario));
+      await AsyncStorage.setItem('sesionIniciada', 'true');
+    } catch (error) {
+      console.error('Error al guardar sesión:', error);
+    }
+  };
+
+  // Función para cargar sesión desde AsyncStorage
+  const cargarSesion = async () => {
+    try {
+      const sesionGuardada = await AsyncStorage.getItem('sesionUsuario');
+      const sesionActiva = await AsyncStorage.getItem('sesionIniciada');
+      
+      if (sesionGuardada && sesionActiva === 'true') {
+        const datosUsuario = JSON.parse(sesionGuardada);
+        setUsuario(datosUsuario);
+        setSesionIniciada(true);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error al cargar sesión:', error);
+      return false;
+    }
+  };
+
+  // Función para limpiar sesión de AsyncStorage
+  const limpiarSesion = async () => {
+    try {
+      await AsyncStorage.removeItem('sesionUsuario');
+      await AsyncStorage.removeItem('sesionIniciada');
+    } catch (error) {
+      console.error('Error al limpiar sesión:', error);
+    }
+  };
 
   // Función para establecer el usuario logueado
-  const establecerUsuario = (datosUsuario) => {
+  const establecerUsuario = async (datosUsuario) => {
     setUsuario(datosUsuario);
+    setSesionIniciada(true);
+    await guardarSesion(datosUsuario);
   };
 
   // Función para establecer el perfil actual
@@ -55,13 +100,60 @@ export const UsuarioProvider = ({ children }) => {
   // Función para cambiar de perfil
   const cambiarPerfil = useCallback((nuevoPerfil) => {
     setPerfilActual(nuevoPerfil);
+    setRequiereVerificacionPin(false);
+    setTiempoUltimaActividad(Date.now());
   }, []);
 
+  // Función para actualizar actividad del usuario
+  const actualizarActividad = useCallback(() => {
+    const ahora = Date.now();
+    console.log('⏰ Actualizando actividad:', new Date(ahora).toLocaleTimeString());
+    setTiempoUltimaActividad(ahora);
+    if (requiereVerificacionPin) {
+      setRequiereVerificacionPin(false);
+    }
+  }, [requiereVerificacionPin]);
+
+  // Función para verificar si se requiere PIN por inactividad
+  const verificarInactividad = useCallback(() => {
+    if (perfilActual?.pin) {
+      const tiempoInactivo = Date.now() - tiempoUltimaActividad;
+      const TIEMPO_LIMITE = 30 * 1000; // 30 SEGUNDOS para pruebas (cambiar a 30 * 60 * 1000 para producción)
+      
+      console.log('🔍 Verificando inactividad:', {
+        tiempoInactivo: Math.round(tiempoInactivo / 1000) + 's',
+        tiempoLimite: Math.round(TIEMPO_LIMITE / 1000) + 's',
+        requierePIN: tiempoInactivo > TIEMPO_LIMITE
+      });
+      
+      if (tiempoInactivo > TIEMPO_LIMITE) {
+        console.log('🔐 Solicitando PIN por inactividad');
+        setRequiereVerificacionPin(true);
+        return true;
+      }
+    }
+    return false;
+  }, [perfilActual, tiempoUltimaActividad]);
+
+  // Función para marcar que se requiere verificación de PIN
+  const solicitarVerificacionPin = useCallback(() => {
+    if (perfilActual?.pin) {
+      setRequiereVerificacionPin(true);
+    }
+  }, [perfilActual]);
+
   // Función para cerrar sesión
-  const cerrarSesion = useCallback(() => {
+  const cerrarSesion = useCallback(async () => {
     setUsuario(null);
     setPerfilActual(null);
     setPerfilesDisponibles([]);
+    setSesionIniciada(false);
+    await limpiarSesion();
+  }, []);
+
+  // Cargar sesión al inicializar la app
+  useEffect(() => {
+    cargarSesion();
   }, []);
 
   // Cargar perfiles cuando se establece un usuario
@@ -77,13 +169,20 @@ export const UsuarioProvider = ({ children }) => {
     perfilActual,
     perfilesDisponibles,
     cargandoPerfiles,
+    requiereVerificacionPin,
+    tiempoUltimaActividad,
+    sesionIniciada,
     
     // Funciones
     establecerUsuario,
     establecerPerfilActual,
     cargarPerfilesDisponibles,
     cambiarPerfil,
+    actualizarActividad,
+    verificarInactividad,
+    solicitarVerificacionPin,
     cerrarSesion,
+    cargarSesion,
   };
 
   return (

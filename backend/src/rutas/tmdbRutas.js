@@ -26,6 +26,21 @@ const fetchFromTMDB = async (endpoint, params = {}) => {
   }
 };
 
+// 🧩 Función auxiliar para priorizar contenido en español
+const prioritizeSpanishContent = (results) => {
+  return results.sort((a, b) => {
+    // Priorizar contenido en español
+    const aIsSpanish = a.original_language === 'es' || a.original_language === 'es-ES';
+    const bIsSpanish = b.original_language === 'es' || b.original_language === 'es-ES';
+    
+    if (aIsSpanish && !bIsSpanish) return -1;
+    if (!aIsSpanish && bIsSpanish) return 1;
+    
+    // Si ambos son del mismo idioma, ordenar por popularidad
+    return b.popularity - a.popularity;
+  });
+};
+
 // 🖼️ Función para formatear URLs de imágenes
 const formatImageUrls = (item) => {
   return {
@@ -114,22 +129,21 @@ router.get("/peliculas/proximamente", async (req, res) => {
     
     // Configurar fechas dinámicas (desde mañana hasta 1 año adelante)
     const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1); // Empezar desde mañana
+    tomorrow.setDate(tomorrow.getDate() + 1);
     
     const oneYearLater = new Date();
-    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1); // Un año adelante
+    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
     
-    const minDate = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD
-    const maxDate = oneYearLater.toISOString().split('T')[0]; // YYYY-MM-DD
+    const minDate = tomorrow.toISOString().split('T')[0];
+    const maxDate = oneYearLater.toISOString().split('T')[0];
     
-    // Usar /discover/movie con filtros avanzados
     const data = await fetchFromTMDB("/discover/movie", {
       page,
       include_adult: false,
       include_video: false,
       language: "es-ES",
       sort_by: "popularity.desc",
-      with_release_type: "2|3", // Theatrical releases
+      with_release_type: "2|3",
       "release_date.gte": minDate,
       "release_date.lte": maxDate
     });
@@ -151,7 +165,6 @@ router.get("/peliculas/:id", async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Obtener detalles completos
     const detalles = await fetchFromTMDB(`/movie/${id}`, {
       append_to_response: "videos,credits,similar,recommendations"
     });
@@ -171,8 +184,194 @@ router.get("/peliculas/:id", async (req, res) => {
     }));
 
     // Formatear contenido similar
-    const similar = formatContent(detalles.similar?.results?.slice(0, 10) || []);
-    const recommendations = formatContent(detalles.recommendations?.results?.slice(0, 10) || []);
+    let similar = formatContent(detalles.similar?.results?.slice(0, 10) || []);
+    let recommendations = formatContent(detalles.recommendations?.results?.slice(0, 10) || []);
+    
+    // Si no hay contenido similar, implementar fallbacks múltiples
+    if (similar.length === 0 && recommendations.length === 0) {
+      try {
+        console.log(`No hay contenido similar para película ${id}, implementando fallbacks...`);
+        
+        // FALLBACK 1: Buscar por géneros (prioridad principal)
+        if (similar.length === 0 && detalles.genres?.length > 0) {
+          console.log(`Fallback 1: Buscando por géneros:`, detalles.genres.map(g => g.name));
+          
+          const genreIds = detalles.genres.slice(0, 3).map(g => g.id).join(',');
+          
+          const similarByGenre = await fetchFromTMDB("/discover/movie", {
+            with_genres: genreIds,
+            sort_by: "popularity.desc",
+            page: 1,
+            "vote_count.gte": 10, // Reducido para más resultados
+            "vote_average.gte": 4.0 // Reducido para más resultados
+          });
+          
+          const filteredResults = similarByGenre.results
+            .filter(movie => movie.id !== parseInt(id))
+            .slice(0, 15);
+          
+          // Priorizar contenido en español
+          const prioritizedResults = prioritizeSpanishContent(filteredResults).slice(0, 12);
+          
+          if (prioritizedResults.length > 0) {
+            similar = formatContent(prioritizedResults);
+            console.log(`Encontradas ${similar.length} películas similares por género (priorizando español)`);
+          }
+        }
+        
+        // FALLBACK 2: Buscar por título completo y variaciones (si no hay resultados por género)
+        if (similar.length === 0 && detalles.title) {
+          console.log(`Fallback 2: Buscando por título completo y variaciones: "${detalles.title}"`);
+          
+          const titleSearches = [];
+          
+          // 1. Buscar por título completo
+          titleSearches.push(detalles.title);
+          
+          // 2. Si el título tiene más de una palabra, buscar variaciones
+          const titleWords = detalles.title.split(' ');
+          if (titleWords.length > 1) {
+            // Buscar por las primeras dos palabras si hay más de 2
+            if (titleWords.length > 2) {
+              titleSearches.push(titleWords.slice(0, 2).join(' '));
+            }
+            
+            // Para títulos como "Culpa Mía", buscar también "Culpa"
+            if (titleWords.length === 2) {
+              titleSearches.push(titleWords[0]);
+            }
+          }
+          
+          console.log(`Términos de búsqueda:`, titleSearches);
+          
+          const keywordResults = [];
+          
+          for (const searchTerm of titleSearches) {
+            try {
+              const searchResults = await fetchFromTMDB("/search/movie", {
+                query: searchTerm,
+                page: 1
+              });
+              
+              // Filtrar resultados más relevantes
+              const filteredResults = searchResults.results
+                .filter(movie => {
+                  // Excluir la película actual
+                  if (movie.id === parseInt(id)) return false;
+                  
+                  // Para búsquedas de una sola palabra, ser más estricto
+                  if (searchTerm.split(' ').length === 1) {
+                    const movieTitle = movie.title.toLowerCase();
+                    const originalTitle = movie.original_title?.toLowerCase() || '';
+                    const searchLower = searchTerm.toLowerCase();
+                    
+                    // Solo incluir si el término aparece al inicio del título o es una palabra completa
+                    return movieTitle.startsWith(searchLower) || 
+                           originalTitle.startsWith(searchLower) ||
+                           movieTitle.includes(` ${searchLower} `) ||
+                           originalTitle.includes(` ${searchLower} `) ||
+                           movieTitle.endsWith(` ${searchLower}`) ||
+                           originalTitle.endsWith(` ${searchLower}`);
+                  }
+                  
+                  return true;
+                })
+                .slice(0, 8); // Más resultados para búsquedas de título completo
+              
+              keywordResults.push(...filteredResults);
+            } catch (error) {
+              console.error(`Error buscando por término "${searchTerm}":`, error);
+            }
+          }
+          
+          // Eliminar duplicados y priorizar contenido en español
+          const uniqueResults = keywordResults
+            .filter((movie, index, self) => 
+              index === self.findIndex(m => m.id === movie.id)
+            );
+          
+          // Priorizar contenido en español y por relevancia
+          const prioritizedResults = prioritizeSpanishContent(uniqueResults)
+            .slice(0, 12);
+          
+          if (prioritizedResults.length > 0) {
+            similar = formatContent(prioritizedResults);
+            console.log(`Encontradas ${similar.length} películas similares por título (priorizando español)`);
+          }
+        }
+        
+        // FALLBACK 3: Buscar por géneros (si los tiene y no encontramos por palabras clave)
+        if (similar.length === 0 && detalles.genres?.length > 0) {
+          console.log(`Fallback 3: Buscando por géneros (segunda oportunidad):`, detalles.genres.map(g => g.name));
+          
+          const genreIds = detalles.genres.slice(0, 2).map(g => g.id).join(',');
+          
+          const similarByGenre = await fetchFromTMDB("/discover/movie", {
+            with_genres: genreIds,
+            sort_by: "popularity.desc",
+            page: 1,
+            "vote_count.gte": 50, // Reducido para más resultados
+            "vote_average.gte": 5.5 // Reducido para más resultados
+          });
+          
+          const filteredResults = similarByGenre.results
+            .filter(movie => movie.id !== parseInt(id))
+            .slice(0, 10);
+          
+          similar = formatContent(filteredResults);
+          console.log(`Encontradas ${similar.length} películas similares por género`);
+        }
+        
+        // FALLBACK 4: Si aún no hay resultados, buscar películas populares del mismo año
+        if (similar.length === 0 && detalles.release_date) {
+          console.log(`Fallback 4: Buscando por año de lanzamiento`);
+          
+          const year = detalles.release_date.split('-')[0];
+          
+          const similarByYear = await fetchFromTMDB("/discover/movie", {
+            primary_release_year: year,
+            sort_by: "popularity.desc",
+            page: 1,
+            "vote_count.gte": 50
+          });
+          
+          const filteredResults = similarByYear.results
+            .filter(movie => movie.id !== parseInt(id))
+            .slice(0, 10);
+          
+          similar = formatContent(filteredResults);
+          console.log(`Encontradas ${similar.length} películas similares por año (${year})`);
+        }
+        
+        // FALLBACK 5: Si aún no hay resultados, mostrar películas populares generales
+        if (similar.length === 0) {
+          console.log(`Fallback 5: Mostrando películas populares generales`);
+          
+          const popularMovies = await fetchFromTMDB("/movie/popular", {
+            page: 1
+          });
+          
+          const filteredResults = popularMovies.results
+            .filter(movie => movie.id !== parseInt(id))
+            .slice(0, 10);
+          
+          similar = formatContent(filteredResults);
+          console.log(`Encontradas ${similar.length} películas populares como fallback final`);
+        }
+        
+      } catch (error) {
+        console.error("Error en fallbacks de contenido similar:", error);
+        
+        // FALLBACK DE EMERGENCIA: Al menos mostrar algunas películas populares
+        try {
+          const popularMovies = await fetchFromTMDB("/movie/popular", { page: 1 });
+          similar = formatContent(popularMovies.results.slice(0, 6));
+          console.log(`Fallback de emergencia: ${similar.length} películas populares`);
+        } catch (emergencyError) {
+          console.error("Error en fallback de emergencia:", emergencyError);
+        }
+      }
+    }
     
     res.json({
       id: detalles.id,
@@ -201,6 +400,26 @@ router.get("/peliculas/:id", async (req, res) => {
     });
   } catch {
     res.status(500).json({ error: "Error al obtener detalles de la película" });
+  }
+});
+
+// Películas por género
+router.get("/peliculas/genero/:genreId", async (req, res) => {
+  try {
+    const { genreId } = req.params;
+    const { page = 1 } = req.query;
+    const data = await fetchFromTMDB("/discover/movie", {
+      with_genres: genreId,
+      sort_by: "popularity.desc",
+      page
+    });
+    res.json({
+      results: formatContent(data.results),
+      page: data.page,
+      total_pages: data.total_pages
+    });
+  } catch {
+    res.status(500).json({ error: "Error al obtener películas por género" });
   }
 });
 
@@ -292,8 +511,194 @@ router.get("/series/:id", async (req, res) => {
     }));
 
     // Formatear contenido similar
-    const similar = formatContent(detalles.similar?.results?.slice(0, 10) || []);
-    const recommendations = formatContent(detalles.recommendations?.results?.slice(0, 10) || []);
+    let similar = formatContent(detalles.similar?.results?.slice(0, 10) || []);
+    let recommendations = formatContent(detalles.recommendations?.results?.slice(0, 10) || []);
+    
+    // Si no hay contenido similar, implementar fallbacks múltiples
+    if (similar.length === 0 && recommendations.length === 0) {
+      try {
+        console.log(`No hay contenido similar para serie ${id}, implementando fallbacks...`);
+        
+        // FALLBACK 1: Buscar por géneros (prioridad principal)
+        if (similar.length === 0 && detalles.genres?.length > 0) {
+          console.log(`Fallback 1: Buscando por géneros:`, detalles.genres.map(g => g.name));
+          
+          const genreIds = detalles.genres.slice(0, 3).map(g => g.id).join(',');
+          
+          const similarByGenre = await fetchFromTMDB("/discover/tv", {
+            with_genres: genreIds,
+            sort_by: "popularity.desc",
+            page: 1,
+            "vote_count.gte": 10, // Reducido para más resultados
+            "vote_average.gte": 4.0 // Reducido para más resultados
+          });
+          
+          const filteredResults = similarByGenre.results
+            .filter(show => show.id !== parseInt(id))
+            .slice(0, 15);
+          
+          // Priorizar contenido en español
+          const prioritizedResults = prioritizeSpanishContent(filteredResults).slice(0, 12);
+          
+          if (prioritizedResults.length > 0) {
+            similar = formatContent(prioritizedResults);
+            console.log(`Encontradas ${similar.length} series similares por género (priorizando español)`);
+          }
+        }
+        
+        // FALLBACK 2: Buscar por título completo y variaciones (si no hay resultados por género)
+        if (similar.length === 0 && detalles.name) {
+          console.log(`Fallback 2: Buscando por título completo y variaciones: "${detalles.name}"`);
+          
+          const titleSearches = [];
+          
+          // 1. Buscar por título completo
+          titleSearches.push(detalles.name);
+          
+          // 2. Si el título tiene más de una palabra, buscar variaciones
+          const titleWords = detalles.name.split(' ');
+          if (titleWords.length > 1) {
+            // Buscar por las primeras dos palabras si hay más de 2
+            if (titleWords.length > 2) {
+              titleSearches.push(titleWords.slice(0, 2).join(' '));
+            }
+            
+            // Para títulos como "Elite", buscar también la primera palabra
+            if (titleWords.length === 2) {
+              titleSearches.push(titleWords[0]);
+            }
+          }
+          
+          console.log(`Términos de búsqueda:`, titleSearches);
+          
+          const keywordResults = [];
+          
+          for (const searchTerm of titleSearches) {
+            try {
+              const searchResults = await fetchFromTMDB("/search/tv", {
+                query: searchTerm,
+                page: 1
+              });
+              
+              // Filtrar resultados más relevantes
+              const filteredResults = searchResults.results
+                .filter(show => {
+                  // Excluir la serie actual
+                  if (show.id === parseInt(id)) return false;
+                  
+                  // Para búsquedas de una sola palabra, ser más estricto
+                  if (searchTerm.split(' ').length === 1) {
+                    const showName = show.name.toLowerCase();
+                    const originalName = show.original_name?.toLowerCase() || '';
+                    const searchLower = searchTerm.toLowerCase();
+                    
+                    // Solo incluir si el término aparece al inicio del título o es una palabra completa
+                    return showName.startsWith(searchLower) || 
+                           originalName.startsWith(searchLower) ||
+                           showName.includes(` ${searchLower} `) ||
+                           originalName.includes(` ${searchLower} `) ||
+                           showName.endsWith(` ${searchLower}`) ||
+                           originalName.endsWith(` ${searchLower}`);
+                  }
+                  
+                  return true;
+                })
+                .slice(0, 8); // Más resultados para búsquedas de título completo
+              
+              keywordResults.push(...filteredResults);
+            } catch (error) {
+              console.error(`Error buscando por término "${searchTerm}":`, error);
+            }
+          }
+          
+          // Eliminar duplicados y priorizar contenido en español
+          const uniqueResults = keywordResults
+            .filter((show, index, self) => 
+              index === self.findIndex(s => s.id === show.id)
+            );
+          
+          // Priorizar contenido en español y por relevancia
+          const prioritizedResults = prioritizeSpanishContent(uniqueResults)
+            .slice(0, 12);
+          
+          if (prioritizedResults.length > 0) {
+            similar = formatContent(prioritizedResults);
+            console.log(`Encontradas ${similar.length} series similares por título (priorizando español)`);
+          }
+        }
+        
+        // FALLBACK 3: Buscar por géneros (si los tiene y no encontramos por palabras clave)
+        if (similar.length === 0 && detalles.genres?.length > 0) {
+          console.log(`Fallback 3: Buscando por géneros (segunda oportunidad):`, detalles.genres.map(g => g.name));
+          
+          const genreIds = detalles.genres.slice(0, 2).map(g => g.id).join(',');
+          
+          const similarByGenre = await fetchFromTMDB("/discover/tv", {
+            with_genres: genreIds,
+            sort_by: "popularity.desc",
+            page: 1,
+            "vote_count.gte": 25, // Reducido para más resultados
+            "vote_average.gte": 5.5 // Reducido para más resultados
+          });
+          
+          const filteredResults = similarByGenre.results
+            .filter(show => show.id !== parseInt(id))
+            .slice(0, 10);
+          
+          similar = formatContent(filteredResults);
+          console.log(`Encontradas ${similar.length} series similares por género`);
+        }
+        
+        // FALLBACK 4: Si aún no hay resultados, buscar series populares del mismo año
+        if (similar.length === 0 && detalles.first_air_date) {
+          console.log(`Fallback 4: Buscando por año de estreno`);
+          
+          const year = detalles.first_air_date.split('-')[0];
+          
+          const similarByYear = await fetchFromTMDB("/discover/tv", {
+            first_air_date_year: year,
+            sort_by: "popularity.desc",
+            page: 1,
+            "vote_count.gte": 25
+          });
+          
+          const filteredResults = similarByYear.results
+            .filter(show => show.id !== parseInt(id))
+            .slice(0, 10);
+          
+          similar = formatContent(filteredResults);
+          console.log(`Encontradas ${similar.length} series similares por año (${year})`);
+        }
+        
+        // FALLBACK 5: Si aún no hay resultados, mostrar series populares generales
+        if (similar.length === 0) {
+          console.log(`Fallback 5: Mostrando series populares generales`);
+          
+          const popularShows = await fetchFromTMDB("/tv/popular", {
+            page: 1
+          });
+          
+          const filteredResults = popularShows.results
+            .filter(show => show.id !== parseInt(id))
+            .slice(0, 10);
+          
+          similar = formatContent(filteredResults);
+          console.log(`Encontradas ${similar.length} series populares como fallback final`);
+        }
+        
+      } catch (error) {
+        console.error("Error en fallbacks de contenido similar:", error);
+        
+        // FALLBACK DE EMERGENCIA: Al menos mostrar algunas series populares
+        try {
+          const popularShows = await fetchFromTMDB("/tv/popular", { page: 1 });
+          similar = formatContent(popularShows.results.slice(0, 6));
+          console.log(`Fallback de emergencia: ${similar.length} series populares`);
+        } catch (emergencyError) {
+          console.error("Error en fallback de emergencia:", emergencyError);
+        }
+      }
+    }
     
     res.json({
       id: detalles.id,
@@ -330,25 +735,250 @@ router.get("/series/:id", async (req, res) => {
   }
 });
 
+// 🆕 Detalles completos de una serie con TODAS sus temporadas y episodios
+router.get("/series/:id/completo", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Obtener detalles básicos
+    const detalles = await fetchFromTMDB(`/tv/${id}`, {
+      append_to_response: "videos,credits,similar,recommendations"
+    });
+    
+    // Obtener TODAS las temporadas con episodios
+    const temporadasCompletas = await Promise.all(
+      detalles.seasons.map(async (season) => {
+        // Omitir "Specials" (temporada 0)
+        if (season.season_number === 0) return null;
+        
+        try {
+          const temporadaDetalle = await fetchFromTMDB(
+            `/tv/${id}/season/${season.season_number}`
+          );
+          
+          return {
+            id: temporadaDetalle.id,
+            name: temporadaDetalle.name,
+            overview: temporadaDetalle.overview,
+            season_number: temporadaDetalle.season_number,
+            episode_count: temporadaDetalle.episodes?.length || 0,
+            air_date: temporadaDetalle.air_date,
+            poster_url: temporadaDetalle.poster_path 
+              ? `${IMAGE_BASE_URL}/w500${temporadaDetalle.poster_path}` 
+              : null,
+            episodes: temporadaDetalle.episodes?.map(ep => ({
+              id: ep.id,
+              name: ep.name,
+              overview: ep.overview,
+              episode_number: ep.episode_number,
+              season_number: ep.season_number,
+              air_date: ep.air_date,
+              runtime: ep.runtime,
+              vote_average: ep.vote_average,
+              vote_count: ep.vote_count,
+              still_url: ep.still_path 
+                ? `${IMAGE_BASE_URL}/w300${ep.still_path}` 
+                : null,
+              still_large: ep.still_path 
+                ? `${IMAGE_BASE_URL}/original${ep.still_path}` 
+                : null
+            })) || []
+          };
+        } catch {
+          return null;
+        }
+      })
+    );
+    
+    // Filtrar temporadas nulas
+    const temporadasValidas = temporadasCompletas.filter(t => t !== null);
+    
+    // Filtrar trailer
+    const videos = detalles.videos?.results || [];
+    const trailerES = videos.find(v => v.type === "Trailer" && v.site === "YouTube" && v.iso_639_1 === "es");
+    const trailerEN = videos.find(v => v.type === "Trailer" && v.site === "YouTube" && v.iso_639_1 === "en");
+    const trailer = trailerES || trailerEN || videos[0];
+    
+    // Formatear cast
+    const cast = detalles.credits?.cast?.slice(0, 10).map(actor => ({
+      id: actor.id,
+      name: actor.name,
+      character: actor.character,
+      profile_url: actor.profile_path 
+        ? `${IMAGE_BASE_URL}/w185${actor.profile_path}` 
+        : null
+    }));
+
+    // Formatear contenido similar
+    const similar = formatContent(detalles.similar?.results?.slice(0, 10) || []);
+    const recommendations = formatContent(detalles.recommendations?.results?.slice(0, 10) || []);
+    
+    res.json({
+      id: detalles.id,
+      name: detalles.name,
+      original_name: detalles.original_name,
+      overview: detalles.overview,
+      first_air_date: detalles.first_air_date,
+      last_air_date: detalles.last_air_date,
+      number_of_seasons: detalles.number_of_seasons,
+      number_of_episodes: detalles.number_of_episodes,
+      episode_run_time: detalles.episode_run_time,
+      vote_average: detalles.vote_average,
+      vote_count: detalles.vote_count,
+      popularity: detalles.popularity,
+      status: detalles.status,
+      genres: detalles.genres,
+      poster_url: detalles.poster_path 
+        ? `${IMAGE_BASE_URL}/w500${detalles.poster_path}` 
+        : null,
+      backdrop_url: detalles.backdrop_path 
+        ? `${IMAGE_BASE_URL}/original${detalles.backdrop_path}` 
+        : null,
+      poster_small: detalles.poster_path 
+        ? `${IMAGE_BASE_URL}/w185${detalles.poster_path}` 
+        : null,
+      trailer: trailer ? {
+        key: trailer.key,
+        url: `https://www.youtube.com/watch?v=${trailer.key}`,
+        embed_url: `https://www.youtube.com/embed/${trailer.key}`,
+        name: trailer.name,
+        type: trailer.type
+      } : null,
+      cast,
+      similar,
+      recommendations,
+      temporadas: temporadasValidas // ✨ TODAS LAS TEMPORADAS CON EPISODIOS
+    });
+  } catch (error) {
+    console.error("Error al obtener serie completa:", error);
+    res.status(500).json({ error: "Error al obtener detalles completos de la serie" });
+  }
+});
+
 // Detalles de una temporada específica
 router.get("/series/:id/temporada/:season", async (req, res) => {
   try {
     const { id, season } = req.params;
     const data = await fetchFromTMDB(`/tv/${id}/season/${season}`);
     
-    // Formatear episodios
+    // Formatear episodios con más detalles
     const episodes = data.episodes?.map(ep => ({
-      ...ep,
-      still_url: ep.still_path ? `${IMAGE_BASE_URL}/w300${ep.still_path}` : null
+      id: ep.id,
+      name: ep.name,
+      overview: ep.overview,
+      episode_number: ep.episode_number,
+      season_number: ep.season_number,
+      air_date: ep.air_date,
+      runtime: ep.runtime,
+      vote_average: ep.vote_average,
+      vote_count: ep.vote_count,
+      still_url: ep.still_path 
+        ? `${IMAGE_BASE_URL}/w300${ep.still_path}` 
+        : null,
+      still_large: ep.still_path 
+        ? `${IMAGE_BASE_URL}/original${ep.still_path}` 
+        : null
     }));
     
     res.json({
-      ...data,
-      episodes,
-      poster_url: data.poster_path ? `${IMAGE_BASE_URL}/w500${data.poster_path}` : null
+      id: data.id,
+      name: data.name,
+      overview: data.overview,
+      season_number: data.season_number,
+      air_date: data.air_date,
+      episode_count: episodes?.length || 0,
+      poster_url: data.poster_path 
+        ? `${IMAGE_BASE_URL}/w500${data.poster_path}` 
+        : null,
+      episodes
     });
   } catch {
     res.status(500).json({ error: "Error al obtener detalles de la temporada" });
+  }
+});
+
+// 🆕 Detalles de un episodio específico
+router.get("/series/:id/temporada/:season/episodio/:episode", async (req, res) => {
+  try {
+    const { id, season, episode } = req.params;
+    
+    const data = await fetchFromTMDB(
+      `/tv/${id}/season/${season}/episode/${episode}`,
+      { append_to_response: "credits,images,videos" }
+    );
+    
+    // Filtrar trailer del episodio
+    const videos = data.videos?.results || [];
+    const trailer = videos.find(v => v.site === "YouTube") || videos[0];
+    
+    // Guest stars (actores invitados)
+    const guestStars = data.guest_stars?.map(actor => ({
+      id: actor.id,
+      name: actor.name,
+      character: actor.character,
+      profile_url: actor.profile_path 
+        ? `${IMAGE_BASE_URL}/w185${actor.profile_path}` 
+        : null
+    }));
+    
+    // Crew (director, escritores, etc.)
+    const crew = data.crew?.slice(0, 5).map(person => ({
+      id: person.id,
+      name: person.name,
+      job: person.job,
+      department: person.department,
+      profile_url: person.profile_path 
+        ? `${IMAGE_BASE_URL}/w185${person.profile_path}` 
+        : null
+    }));
+    
+    res.json({
+      id: data.id,
+      name: data.name,
+      overview: data.overview,
+      episode_number: data.episode_number,
+      season_number: data.season_number,
+      air_date: data.air_date,
+      runtime: data.runtime,
+      vote_average: data.vote_average,
+      vote_count: data.vote_count,
+      still_url: data.still_path 
+        ? `${IMAGE_BASE_URL}/original${data.still_path}` 
+        : null,
+      still_small: data.still_path 
+        ? `${IMAGE_BASE_URL}/w300${data.still_path}` 
+        : null,
+      trailer: trailer ? {
+        key: trailer.key,
+        url: `https://www.youtube.com/watch?v=${trailer.key}`,
+        embed_url: `https://www.youtube.com/embed/${trailer.key}`,
+        name: trailer.name
+      } : null,
+      guest_stars: guestStars,
+      crew
+    });
+  } catch {
+    res.status(500).json({ error: "Error al obtener detalles del episodio" });
+  }
+});
+
+// Series por género
+router.get("/series/genero/:genreId", async (req, res) => {
+  try {
+    const { genreId } = req.params;
+    const { page = 1 } = req.query;
+    const data = await fetchFromTMDB("/discover/tv", {
+      with_genres: genreId,
+      sort_by: "popularity.desc",
+      page
+    });
+    res.json({
+      results: formatContent(data.results),
+      page: data.page,
+      total_pages: data.total_pages
+    });
+  } catch {
+    res.status(500).json({ error: "Error al obtener series por género" });
   }
 });
 
@@ -444,46 +1074,6 @@ router.get("/generos/series", async (req, res) => {
   }
 });
 
-// Películas por género
-router.get("/peliculas/genero/:genreId", async (req, res) => {
-  try {
-    const { genreId } = req.params;
-    const { page = 1 } = req.query;
-    const data = await fetchFromTMDB("/discover/movie", {
-      with_genres: genreId,
-      sort_by: "popularity.desc",
-      page
-    });
-    res.json({
-      results: formatContent(data.results),
-      page: data.page,
-      total_pages: data.total_pages
-    });
-  } catch {
-    res.status(500).json({ error: "Error al obtener películas por género" });
-  }
-});
-
-// Series por género
-router.get("/series/genero/:genreId", async (req, res) => {
-  try {
-    const { genreId } = req.params;
-    const { page = 1 } = req.query;
-    const data = await fetchFromTMDB("/discover/tv", {
-      with_genres: genreId,
-      sort_by: "popularity.desc",
-      page
-    });
-    res.json({
-      results: formatContent(data.results),
-      page: data.page,
-      total_pages: data.total_pages
-    });
-  } catch {
-    res.status(500).json({ error: "Error al obtener series por género" });
-  }
-});
-
 // ========================================
 // 🏠 PÁGINA DE INICIO - TODO EN UNO
 // ========================================
@@ -511,7 +1101,7 @@ router.get("/inicio", async (req, res) => {
       series_populares: formatContent(seriesPopulares.results.slice(0, 10)),
       peliculas_cartelera: formatContent(peliculasCartelera.results.slice(0, 10)),
       series_tendencia: formatContent(seriesTendencia.results.slice(0, 10)),
-      destacado: formatImageUrls(peliculasTendencia.results[0]) // Para el banner principal
+      destacado: formatImageUrls(peliculasTendencia.results[0])
     });
   } catch (error) {
     res.status(500).json({ error: "Error al obtener contenido de inicio" });

@@ -146,3 +146,85 @@ export const eliminarPerfil = async (req, res) => {
     });
   }
 };
+
+// Actualizar PIN de un perfil
+export const actualizarPinPerfil = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pin } = req.body;
+
+    // Validaciones
+    if (pin !== null && pin !== undefined) {
+      // Si se proporciona un PIN, validar que sea de 4 dígitos
+      if (typeof pin !== 'string' || !/^\d{4}$/.test(pin)) {
+        return res.status(400).json({
+          mensaje: 'El PIN debe ser exactamente 4 dígitos numéricos'
+        });
+      }
+    }
+
+    // Verificar que el perfil existe
+    const perfilExistente = await modeloPerfil.obtenerPerfilPorId(id);
+    if (!perfilExistente) {
+      return res.status(404).json({
+        mensaje: 'Perfil no encontrado'
+      });
+    }
+
+    await modeloPerfil.actualizarPinPerfil(id, pin);
+
+    res.status(200).json({
+      mensaje: pin ? 'PIN configurado exitosamente' : 'PIN eliminado exitosamente',
+      perfil: {
+        id: parseInt(id),
+        nombre: perfilExistente.nombre,
+        id_usuario: perfilExistente.id_usuario,
+        tienePIN: !!pin
+      }
+    });
+  } catch (error) {
+    console.error('Error al actualizar PIN del perfil:', error);
+    res.status(500).json({
+      mensaje: 'Error interno del servidor'
+    });
+  }
+};
+
+// Verificar PIN de un perfil
+export const verificarPinPerfil = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pin } = req.body;
+
+    if (!pin) {
+      return res.status(400).json({
+        mensaje: 'El PIN es requerido'
+      });
+    }
+
+    if (typeof pin !== 'string' || !/^\d{4}$/.test(pin)) {
+      return res.status(400).json({
+        mensaje: 'El PIN debe ser exactamente 4 dígitos numéricos'
+      });
+    }
+
+    const resultado = await modeloPerfil.verificarPinPerfil(id, pin);
+
+    if (resultado.valido) {
+      res.status(200).json({
+        mensaje: 'PIN verificado exitosamente',
+        acceso: true
+      });
+    } else {
+      res.status(401).json({
+        mensaje: resultado.mensaje,
+        acceso: false
+      });
+    }
+  } catch (error) {
+    console.error('Error al verificar PIN del perfil:', error);
+    res.status(500).json({
+      mensaje: 'Error interno del servidor'
+    });
+  }
+};

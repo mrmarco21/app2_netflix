@@ -5,7 +5,17 @@ import {
   StyleSheet,
 } from 'react-native';
 
-export default function InfoPelicula({ titulo, año, duracion, clasificacion, ranking }) {
+export default function InfoPelicula({ 
+  titulo, 
+  año, 
+  duracion, 
+  clasificacion, 
+  ranking, 
+  generos, 
+  esSerie = false, 
+  temporadas = [], 
+  episodios 
+}) {
   return (
     <View style={styles.container}>
       {/* Ranking si existe */}
@@ -19,8 +29,13 @@ export default function InfoPelicula({ titulo, año, duracion, clasificacion, ra
         </View>
       )}
       
-      {/* Título de la película */}
+      {/* Título de la película/serie */}
       <Text style={styles.titulo}>{titulo}</Text>
+      
+      {/* Géneros */}
+      {generos && (
+        <Text style={styles.generos}>{generos}</Text>
+      )}
       
       {/* Información adicional */}
       <View style={styles.infoRow}>
@@ -40,6 +55,8 @@ export default function InfoPelicula({ titulo, año, duracion, clasificacion, ra
           <Text style={styles.audioLabel}>Audio espacial</Text>
         </View>
       </View>
+      
+
     </View>
   );
 }
@@ -83,6 +100,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 12,
+  },
+  generos: {
+    fontSize: 14,
+    color: '#999',
+    marginBottom: 8,
   },
   infoRow: {
     flexDirection: 'row',
@@ -137,7 +159,18 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   audioLabel: {
+    fontSize: 10,
+    color: 'white',
+    marginLeft: 2,
+  },
+  serieInfo: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  serieInfoText: {
+    fontSize: 14,
     color: '#999',
-    fontSize: 12,
+    marginRight: 8,
   },
 });

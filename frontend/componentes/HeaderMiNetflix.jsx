@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function HeaderMiNetflix({ onMenuPress, perfilActual, onPerfilPress }) {
+export default function HeaderMiNetflix({ onMenuPress }) {
   return (
     <View style={styles.header}>
-      <TouchableOpacity 
+      {/* <TouchableOpacity 
         style={styles.perfilContainer}
         onPress={onPerfilPress}
       >
@@ -20,11 +20,11 @@ export default function HeaderMiNetflix({ onMenuPress, perfilActual, onPerfilPre
           </>
         )}
         {!perfilActual && (
-          <Text style={styles.titulo}>Mi Netflix</Text>
-        )}
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
+          )}
+          </TouchableOpacity> */}
+      <Text style={styles.titulo}>Mi Netflix</Text>
+
+      <TouchableOpacity
         style={styles.menuButton}
         onPress={onMenuPress}
       >
@@ -72,5 +72,6 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     padding: 5,
+    // left: 350
   },
 });

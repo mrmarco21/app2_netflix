@@ -4,13 +4,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { loginUsuario } from '../servicios/apiUsuarios';
+import { useUsuario } from '../contextos/UsuarioContext';
 
 
 export default function Login({ navigation }) {
-    const [correo, setCorreo] = useState("");
-    const [contraseña, setContraseña] = useState("");
+    const [correo, setCorreo] = useState('');
+    const [contraseña, setContraseña] = useState('');
+    const [mensaje, setMensaje] = useState('');
     const [cargando, setCargando] = useState(false);
-    const [mensaje, setMensaje] = useState("")
+    
+    const { establecerUsuario } = useUsuario();
 
     // Controla el botón de atrás del dispositivo
     useEffect(() => {
@@ -60,20 +63,25 @@ export default function Login({ navigation }) {
             if (resultado.success) {
                 console.log('Éxito:', resultado.mensaje);
 
+                // Establecer usuario en el contexto
+                await establecerUsuario(resultado.data.usuario);
+
                 // Limpiar formulario
                 setCorreo('');
                 setContraseña('');
                 setMensaje('');
 
                 // Navegar a la pantalla de perfiles pasando los datos del usuario
-                navigation.navigate('Perfiles', { usuario: resultado.data.usuario });
+                navigation.navigate('Perfiles', { 
+                    idUsuario: resultado.data.usuario.id 
+                });
             } else {
                 console.warn('Error:', resultado.mensaje);
-                setMensaje(resultado.mensaje || 'Credenciales inválidas');
+                Alert.alert('Error', resultado.mensaje || 'Credenciales incorrectas');
             }
         } catch (error) {
             console.error('Error inesperado:', error);
-            setMensaje('Ocurrió un error inesperado. Inténtalo de nuevo.');
+            Alert.alert('Error', 'Error de conexión. Intenta nuevamente.');
         } finally {
             setCargando(false);
         }

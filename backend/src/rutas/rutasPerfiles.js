@@ -12,6 +12,12 @@ router.get('/usuario/:id_usuario', controladorPerfil.obtenerPerfilesPorUsuario);
 // Actualizar un perfil
 router.put('/:id', controladorPerfil.actualizarPerfil);
 
+// Actualizar PIN de un perfil
+router.put('/:id/pin', controladorPerfil.actualizarPinPerfil);
+
+// Verificar PIN de un perfil
+router.post('/:id/verificar-pin', controladorPerfil.verificarPinPerfil);
+
 // Eliminar un perfil
 router.delete('/:id', controladorPerfil.eliminarPerfil);
 

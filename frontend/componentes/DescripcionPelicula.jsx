@@ -33,7 +33,7 @@ export default function DescripcionPelicula({ descripcion, protagonistas, direcc
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     backgroundColor: '#000',
   },
   descripcion: {

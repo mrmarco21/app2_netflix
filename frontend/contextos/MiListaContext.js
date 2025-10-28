@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useUsuario } from './UsuarioContext';
+import * as apiMiLista from '../servicios/apiMiLista';
 
 const MiListaContext = createContext();
 
@@ -12,39 +14,93 @@ export const useMiLista = () => {
 
 export const MiListaProvider = ({ children }) => {
   const [miLista, setMiLista] = useState([]);
+  const [cargando, setCargando] = useState(false);
+  const { perfilActual } = useUsuario();
 
-  const agregarAMiLista = (contenido) => {
-    setMiLista(prev => {
-      const existe = prev.find(item => item.id === contenido.id);
-      if (!existe) {
-        return [...prev, { ...contenido, fechaAgregado: new Date().toISOString() }];
-      }
-      return prev;
-    });
+  // Cargar Mi Lista cuando cambie el perfil
+  useEffect(() => {
+    if (perfilActual?.id) {
+      cargarMiLista();
+    } else {
+      setMiLista([]);
+    }
+  }, [perfilActual]);
+
+  const cargarMiLista = async () => {
+    if (!perfilActual?.id) return;
+    
+    try {
+      setCargando(true);
+      const lista = await apiMiLista.obtenerMiLista(perfilActual.id);
+      setMiLista(lista || []);
+    } catch (error) {
+      console.error('Error al cargar Mi Lista:', error);
+      setMiLista([]);
+    } finally {
+      setCargando(false);
+    }
   };
 
-  const quitarDeMiLista = (contenidoId) => {
-    setMiLista(prev => prev.filter(item => item.id !== contenidoId));
+  const agregarAMiLista = async (contenido) => {
+    if (!perfilActual?.id) {
+      console.error('No hay perfil activo');
+      return false;
+    }
+
+    try {
+      const resultado = await apiMiLista.agregarAMiLista(perfilActual.id, contenido);
+      
+      // Recargar la lista completa para obtener el tipo correcto desde el servidor
+      await cargarMiLista();
+      
+      return true;
+    } catch (error) {
+      console.error('Error al agregar a Mi Lista:', error);
+      return false;
+    }
+  };
+
+  const quitarDeMiLista = async (contenidoId) => {
+    if (!perfilActual?.id) {
+      console.error('No hay perfil activo');
+      return false;
+    }
+
+    try {
+      await apiMiLista.quitarDeMiLista(perfilActual.id, contenidoId.toString());
+      
+      // Actualizar estado local
+      setMiLista(prev => prev.filter(item => item.id_contenido !== contenidoId.toString()));
+      
+      return true;
+    } catch (error) {
+      console.error('Error al quitar de Mi Lista:', error);
+      return false;
+    }
   };
 
   const estaEnMiLista = (contenidoId) => {
-    return miLista.some(item => item.id === contenidoId);
+    return miLista.some(item => item.id_contenido === contenidoId.toString());
   };
 
-  const toggleMiLista = (contenido, agregar) => {
-    if (agregar) {
-      agregarAMiLista(contenido);
+  const toggleMiLista = async (contenido) => {
+    const esta = estaEnMiLista(contenido.id);
+    
+    if (esta) {
+      return await quitarDeMiLista(contenido.id);
     } else {
-      quitarDeMiLista(contenido.id);
+      return await agregarAMiLista(contenido);
     }
   };
 
   const value = {
     miLista,
+    cargando,
     agregarAMiLista,
     quitarDeMiLista,
     estaEnMiLista,
-    toggleMiLista
+    toggleMiLista,
+    cargarMiLista
   };
 
   return (

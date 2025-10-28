@@ -50,7 +50,9 @@ export const obtenerDetallePelicula = async (id) => {
 
 // Películas por género
 export const obtenerPeliculasPorGenero = async (genreId, page = 1) => {
-  const res = await fetch(`${BASE_URL}/peliculas/genero/${genreId}?page=${page}`);
+  const res = await fetch(
+    `${BASE_URL}/peliculas/genero/${genreId}?page=${page}`
+  );
   return await res.json();
 };
 
@@ -88,15 +90,37 @@ export const obtenerDetalleSerie = async (id) => {
   return await res.json();
 };
 
+// 🆕 Detalle COMPLETO de serie (con TODAS las temporadas y episodios)
+// ⚠️ IMPORTANTE: Este endpoint hace múltiples llamadas y puede ser lento
+// Úsalo solo cuando necesites toda la información de la serie de una vez
+export const obtenerSerieCompleta = async (id) => {
+  const res = await fetch(`${BASE_URL}/series/${id}/completo`);
+  return await res.json();
+};
+
 // Series por género
 export const obtenerSeriesPorGenero = async (genreId, page = 1) => {
   const res = await fetch(`${BASE_URL}/series/genero/${genreId}?page=${page}`);
   return await res.json();
 };
 
-// Detalle de temporada
+// Detalle de temporada (con sus episodios)
 export const obtenerDetalleTemporada = async (serieId, seasonNumber) => {
-  const res = await fetch(`${BASE_URL}/series/${serieId}/temporada/${seasonNumber}`);
+  const res = await fetch(
+    `${BASE_URL}/series/${serieId}/temporada/${seasonNumber}`
+  );
+  return await res.json();
+};
+
+// 🆕 Detalle de un episodio específico
+export const obtenerDetalleEpisodio = async (
+  serieId,
+  seasonNumber,
+  episodeNumber
+) => {
+  const res = await fetch(
+    `${BASE_URL}/series/${serieId}/temporada/${seasonNumber}/episodio/${episodeNumber}`
+  );
   return await res.json();
 };
 
@@ -106,19 +130,25 @@ export const obtenerDetalleTemporada = async (serieId, seasonNumber) => {
 
 // Búsqueda general (películas y series)
 export const buscarContenido = async (query, page = 1) => {
-  const res = await fetch(`${BASE_URL}/buscar?q=${encodeURIComponent(query)}&page=${page}`);
+  const res = await fetch(
+    `${BASE_URL}/buscar?q=${encodeURIComponent(query)}&page=${page}`
+  );
   return await res.json();
 };
 
 // Búsqueda solo películas
 export const buscarPeliculas = async (query, page = 1) => {
-  const res = await fetch(`${BASE_URL}/buscar/peliculas?q=${encodeURIComponent(query)}&page=${page}`);
+  const res = await fetch(
+    `${BASE_URL}/buscar/peliculas?q=${encodeURIComponent(query)}&page=${page}`
+  );
   return await res.json();
 };
 
 // Búsqueda solo series
 export const buscarSeries = async (query, page = 1) => {
-  const res = await fetch(`${BASE_URL}/buscar/series?q=${encodeURIComponent(query)}&page=${page}`);
+  const res = await fetch(
+    `${BASE_URL}/buscar/series?q=${encodeURIComponent(query)}&page=${page}`
+  );
   return await res.json();
 };
 
