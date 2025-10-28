@@ -15,6 +15,11 @@ import Proximamente from "./pantallas/Proximamente";
 import Descargas from "./pantallas/Descargas";
 import MiNetflix from "./pantallas/MiNetflix";
 import DetallePelicula from "./pantallas/DetallePelicula";
+import CategoriaCompleta from "./pantallas/CategoriaCompleta"
+
+// pantalla de prueba:
+import PantallaPruebaTMDB from "./pantallas/PantallaPruebaTMDB"
+import NetflixIntro from "./pantallas/NetflixIntro";
 
 const Stack = createNativeStackNavigator();
 
@@ -43,12 +48,13 @@ export default function App() {
           }}
         >
         <Stack.Navigator
-          initialRouteName="Inicio"
+          initialRouteName="NetflixIntro"
           screenOptions={{ 
             headerShown: false,
             animation: 'fade',
           }}
         >
+          <Stack.Screen name="NetflixIntro" component={NetflixIntro}/>
           <Stack.Screen name="Inicio" component={Inicio} />
           <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="Registro" component={Registro} />
@@ -59,7 +65,7 @@ export default function App() {
           <Stack.Screen name="Descargas" component={Descargas}/>
           <Stack.Screen name="MiNetflix" component={MiNetflix}/>
           <Stack.Screen name="DetallePelicula" component={DetallePelicula}/>
-          
+          <Stack.Screen name="CategoriaCompleta" component={CategoriaCompleta}/>
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

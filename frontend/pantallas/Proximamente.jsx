@@ -12,19 +12,21 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import NavegacionInferior from '../componentes/NavegacionInferior';
+import { obtenerPeliculasProximamente } from '../servicios/tmdbService';
 
 export default function Proximamente({ navigation }) {
   const [contenidoProximo, setContenidoProximo] = useState([]);
   const [notificacionesActivas, setNotificacionesActivas] = useState(new Set());
+  const [cargando, setCargando] = useState(false);
 
-  // Datos de ejemplo para contenido próximo
+  // Datos de ejemplo para contenido próximo (fallback)
   const ejemploContenidoProximo = [
     {
       id: 1,
       titulo: 'Stranger Things 5',
       fechaEstreno: '2024-07-15',
-      tipo: 'Serie',
-      temporada: 'Temporada Final',
+      tipo: 'Película',
+      temporada: null,
       descripcion: 'La batalla final contra el Mundo del Revés llega a su conclusión en esta temporada épica.',
       imagen: 'https://via.placeholder.com/300x450/8B0000/FFFFFF?text=STRANGER+THINGS+5',
       trailer: true,
@@ -45,8 +47,8 @@ export default function Proximamente({ navigation }) {
       id: 3,
       titulo: 'Casa de Papel: Corea',
       fechaEstreno: '2024-03-20',
-      tipo: 'Serie',
-      temporada: 'Temporada 2',
+      tipo: 'Película',
+      temporada: null,
       descripcion: 'La resistencia continúa en la península coreana unificada.',
       imagen: 'https://via.placeholder.com/300x450/FF6347/FFFFFF?text=CASA+PAPEL+COREA',
       trailer: false,
@@ -56,8 +58,8 @@ export default function Proximamente({ navigation }) {
       id: 4,
       titulo: 'Avatar: El Último Maestro Aire',
       fechaEstreno: '2024-04-10',
-      tipo: 'Serie',
-      temporada: 'Temporada 2',
+      tipo: 'Película',
+      temporada: null,
       descripcion: 'Aang continúa su viaje para dominar todos los elementos.',
       imagen: 'https://via.placeholder.com/300x450/228B22/FFFFFF?text=AVATAR+S2',
       trailer: true,
@@ -67,8 +69,8 @@ export default function Proximamente({ navigation }) {
       id: 5,
       titulo: 'Cyberpunk: Edgerunners 2',
       fechaEstreno: '2024-05-25',
-      tipo: 'Serie',
-      temporada: 'Temporada 2',
+      tipo: 'Película',
+      temporada: null,
       descripcion: 'Nuevos mercenarios en las calles de Night City.',
       imagen: 'https://via.placeholder.com/300x450/FF1493/FFFFFF?text=CYBERPUNK+2',
       trailer: false,
@@ -76,8 +78,44 @@ export default function Proximamente({ navigation }) {
     },
   ];
 
+  // Función para cargar datos reales de TMDB
+  const cargarPeliculasProximamente = async () => {
+    setCargando(true);
+    try {
+      console.log('Cargando películas próximamente desde TMDB...');
+      const respuesta = await obtenerPeliculasProximamente(1);
+      console.log('Respuesta TMDB próximamente:', respuesta);
+      
+      if (respuesta?.results && Array.isArray(respuesta.results)) {
+        const peliculasFormateadas = respuesta.results.map(pelicula => ({
+          id: pelicula.id,
+          titulo: pelicula.title || pelicula.name || 'Título no disponible',
+          fechaEstreno: pelicula.release_date || '2024-12-31',
+          tipo: 'Película',
+          temporada: null,
+          descripcion: pelicula.overview || 'Descripción no disponible',
+          imagen: pelicula.poster_path 
+            ? `https://image.tmdb.org/t/p/w500${pelicula.poster_path}`
+            : 'https://via.placeholder.com/300x450/333333/FFFFFF?text=Sin+Imagen',
+          trailer: true, // Asumimos que tienen trailer
+          generos: ['Próximamente'], // Los géneros específicos requerirían otra llamada
+        }));
+        
+        setContenidoProximo(peliculasFormateadas);
+      } else {
+        console.warn('Respuesta TMDB inválida, usando datos de ejemplo');
+        setContenidoProximo(ejemploContenidoProximo);
+      }
+    } catch (error) {
+      console.error('Error al cargar películas próximamente:', error);
+      setContenidoProximo(ejemploContenidoProximo);
+    } finally {
+      setCargando(false);
+    }
+  };
+
   useEffect(() => {
-    setContenidoProximo(ejemploContenidoProximo);
+    cargarPeliculasProximamente();
   }, []);
 
   const toggleNotificacion = (id) => {

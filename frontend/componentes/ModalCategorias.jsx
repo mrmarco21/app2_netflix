@@ -2,11 +2,57 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function ModalCategorias({ modalVisible, setModalVisible, categorias, setFiltroActivo }) {
+export default function ModalCategorias({ modalVisible, setModalVisible, categorias, setFiltroActivo, filtroActivo }) {
   const handleCategoriaSelect = (categoria) => {
     setFiltroActivo(categoria);
     setModalVisible(false);
   };
+
+  // Categorías organizadas por tipo
+  const todasLasCategorias = [
+    { titulo: 'General', items: ['Inicio', 'Mi lista'] },
+    { 
+      titulo: 'Películas', 
+      items: [
+        'Acción', 
+        'Comedia', 
+        'Drama', 
+        'Terror', 
+        'Ciencia Ficción', 
+        'Thriller', 
+        'Romance', 
+        'Animación'
+      ] 
+    },
+    { 
+      titulo: 'Series', 
+      items: [
+        'Acción y Aventura', 
+        'Comedia de Series', 
+        'Drama de Series', 
+        'Crimen', 
+        'Ciencia Ficción y Fantasía', 
+        'Misterio'
+      ] 
+    }
+  ];
+
+  // Filtrar categorías según el filtro activo
+  const categoriasOrganizadas = (() => {
+    if (filtroActivo === 'Películas') {
+      return [
+        todasLasCategorias[0], // General
+        todasLasCategorias[1]  // Solo Películas
+      ];
+    } else if (filtroActivo === 'Series') {
+      return [
+        todasLasCategorias[0], // General
+        todasLasCategorias[2]  // Solo Series
+      ];
+    } else {
+      return todasLasCategorias; // Mostrar todas si no hay filtro específico
+    }
+  })();
 
   return (
     <Modal
@@ -24,14 +70,19 @@ export default function ModalCategorias({ modalVisible, setModalVisible, categor
             <Ionicons name="close" size={24} color="white" />
           </TouchableOpacity>
           <ScrollView style={styles.modalScroll}>
-            {categorias.map((categoria, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.categoriaItem}
-                onPress={() => handleCategoriaSelect(categoria)}
-              >
-                <Text style={styles.categoriaTexto}>{categoria}</Text>
-              </TouchableOpacity>
+            {categoriasOrganizadas.map((seccion, seccionIndex) => (
+              <View key={seccionIndex} style={styles.seccionContainer}>
+                <Text style={styles.tituloSeccion}>{seccion.titulo}</Text>
+                {seccion.items.map((categoria, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.categoriaItem}
+                    onPress={() => handleCategoriaSelect(categoria)}
+                  >
+                    <Text style={styles.categoriaTexto}>{categoria}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             ))}
           </ScrollView>
         </View>
@@ -57,8 +108,18 @@ const styles = StyleSheet.create({
   modalScroll: {
     padding: 20,
   },
+  seccionContainer: {
+    marginBottom: 20,
+  },
+  tituloSeccion: {
+    color: '#e50914',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
   categoriaItem: {
-    paddingVertical: 15,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },

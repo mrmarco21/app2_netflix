@@ -4,13 +4,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMiLista } from '../contextos/MiListaContext';
 import { useNavigation } from '@react-navigation/native';
 
-export default function SeccionContenido({ titulo, contenido, esContinuarViendo = false, onAgregarAMiLista }) {
+export default function SeccionContenido({ 
+  titulo, 
+  contenido, 
+  esContinuarViendo = false, 
+  onAgregarAMiLista,
+  categoriaCompleta = null // Datos adicionales para la categoría completa
+}) {
   const { estaEnMiLista } = useMiLista();
   const navigation = useNavigation();
 
   const handlePeliculaPress = (item) => {
     // Navegar a DetallePelicula con los datos del item
     navigation.navigate('DetallePelicula', { pelicula: item });
+  };
+
+  const handleVerMasPress = () => {
+    // Navegar a la pantalla de categoría completa
+    navigation.navigate('CategoriaCompleta', {
+      titulo: titulo,
+      categoriaCompleta: categoriaCompleta
+    });
   };
 
   const renderContenidoItem = ({ item }) => (
@@ -34,9 +48,24 @@ export default function SeccionContenido({ titulo, contenido, esContinuarViendo 
     </TouchableOpacity>
   );
 
+  // No mostrar botón "Ver más" para "Continuar viendo" y "Mi lista"
+  const mostrarBotonVerMas = !esContinuarViendo && 
+                            titulo !== 'Mi lista' && 
+                            categoriaCompleta !== null;
+
   return (
     <View style={styles.seccionContainer}>
-      <Text style={styles.seccionTitulo}>{titulo}</Text>
+      <View style={styles.tituloContainer}>
+        <Text style={styles.seccionTitulo}>{titulo}</Text>
+        {mostrarBotonVerMas && (
+          <TouchableOpacity 
+            style={styles.botonVerMas}
+            onPress={handleVerMasPress}
+          >
+            <Ionicons name="ellipsis-vertical" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
+      </View>
       <FlatList
         data={contenido}
         renderItem={renderContenidoItem}
@@ -53,12 +82,23 @@ const styles = StyleSheet.create({
   seccionContainer: {
     marginVertical: 15,
   },
+  tituloContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    marginBottom: 10,
+  },
   seccionTitulo: {
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
-    paddingHorizontal: 15,
-    marginBottom: 10,
+    flex: 1,
+  },
+  botonVerMas: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
   },
   listaHorizontal: {
     paddingHorizontal: 15,

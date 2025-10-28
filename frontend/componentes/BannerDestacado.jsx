@@ -38,7 +38,8 @@ export default function BannerDestacado({ contenidoDestacado, onAgregarAMiLista 
           ))}
         </View>
         {contenidoDestacado.descripcion && (
-          <Text style={styles.descripcion}>{contenidoDestacado.descripcion}</Text>
+          <Text style={styles.descripcion } numberOfLines={2}
+      ellipsizeMode="tail">{contenidoDestacado.descripcion}</Text>
         )}
         <View style={styles.bannerButtons}>
           <TouchableOpacity style={styles.playButton}>

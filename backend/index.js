@@ -1,13 +1,11 @@
+import "./src/config/env.js"; // ⬅️ Carga el .env PRIMERO
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import rutasUsuario from "./src/rutas/rutasUsuarios.js";
 import rutasProgreso from "./src/rutas/rutasProgreso.js";
 import rutasPerfiles from "./src/rutas/rutasPerfiles.js";
 import rutasContenido from "./src/rutas/rutasContenido.js";
-import tmdbRutas from "./src/rutas/tmdbRutas.js"
-
-dotenv.config();
+import tmdbRutas from "./src/rutas/tmdbRutas.js";
 
 const app = express();
 app.use(cors());
@@ -22,10 +20,10 @@ app.use("/api/tmdb", tmdbRutas);
 
 // Ruta de prueba
 app.get("/", (req, res) => {
-  res.json({ 
+  res.json({
     message: "🎬 Netflix Clone Backend API funcionando correctamente",
     status: "OK",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 

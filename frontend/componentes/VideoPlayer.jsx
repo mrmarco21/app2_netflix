@@ -13,7 +13,15 @@ const { width } = Dimensions.get('window');
 export default function VideoPlayer({ imagen, onPlay }) {
   return (
     <View style={styles.container}>
-      <Image source={{ uri: imagen }} style={styles.videoThumbnail} />
+      <Image 
+        source={{ 
+          uri: imagen || 'https://via.placeholder.com/800x450/333333/FFFFFF?text=Sin+Video'
+        }} 
+        style={styles.videoThumbnail}
+        onError={() => {
+          console.log('Error cargando imagen del video:', imagen);
+        }}
+      />
       
       {/* Overlay con botón de play */}
       <View style={styles.overlay}>

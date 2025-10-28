@@ -142,19 +142,22 @@ const styles = StyleSheet.create({
   },
   slideTitle: {
     color: "white",
-    fontSize: 28,
+    fontSize: 45,
     fontWeight: "bold",
+    fontFamily: 'serif',
   },
   slideSubtitle: {
     color: "white",
     fontSize: 22,
     fontWeight: "500",
+    fontFamily: 'serif',
   },
   slideDescription: {
     color: "white",
     fontSize: 16,
     marginTop: 10,
     opacity: 0.8,
+    fontFamily: 'serif',
   },
   pagination: {
     flexDirection: "row",

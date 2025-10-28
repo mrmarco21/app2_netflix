@@ -110,7 +110,7 @@ export default function DetallePelicula({ navigation, route }) {
 
       <ScrollView style={styles.scrollContainer}>
         <VideoPlayer 
-          imagen={peliculaData.imagen}
+          imagen={peliculaData.imagen || peliculaData.poster_url || peliculaData.backdrop_url}
           onPlay={handlePlay}
         />
 
