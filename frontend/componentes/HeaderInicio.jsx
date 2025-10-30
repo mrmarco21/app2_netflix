@@ -6,7 +6,7 @@ export default function HeaderInicio({ filtroActivo, onPressBuscar }) {
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
-        <Text style={styles.logo}>N</Text>
+        <Text style={styles.logo}>SOL SOL</Text>
         <Text style={styles.titulo}>{filtroActivo}</Text>
       </View>
       <View style={styles.headerRight}>

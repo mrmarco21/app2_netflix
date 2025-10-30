@@ -75,17 +75,22 @@ export default function InicioApp({ navigation, route }) {
   // Establecer el usuario y perfil en el contexto global cuando se monta el componente
   useEffect(() => {
     if (idUsuario && perfil) {
+      console.log('🔄 Estableciendo usuario y perfil en InicioApp:', { idUsuario, perfil: perfil.nombre });
       establecerUsuario({ id: idUsuario });
-      establecerPerfilActual(perfil);
+      // Solo establecer el perfil si es diferente al actual para evitar re-renders innecesarios
+      if (!perfilActual || perfilActual.id !== perfil.id) {
+        establecerPerfilActual(perfil);
+      }
     }
-  }, [idUsuario, perfil]);
+  }, [idUsuario, perfil, perfilActual]);
 
   // Manejar verificación de PIN cuando se requiere
   useEffect(() => {
-    if (requiereVerificacionPin && perfilActual?.pin) {
+    if (requiereVerificacionPin && perfilActual?.pin && !modalPinVisible) {
+      console.log('🔐 Mostrando modal PIN por verificación requerida');
       setModalPinVisible(true);
     }
-  }, [requiereVerificacionPin, perfilActual]);
+  }, [requiereVerificacionPin, perfilActual?.pin, modalPinVisible]);
 
   // Manejar cambios en el estado de la aplicación
   useEffect(() => {
@@ -118,9 +123,11 @@ export default function InicioApp({ navigation, route }) {
   };
 
   // Manejar acceso permitido después de verificar PIN
-  const manejarAccesoPermitido = () => {
+  const manejarAccesoPermitido = (perfil) => {
     setModalPinVisible(false);
     actualizarActividad();
+    // No es necesario cambiar el perfil aquí ya que ya está establecido
+    // Solo actualizamos la actividad para resetear el timer de inactividad
   };
 
   // Manejar cierre del modal de PIN
