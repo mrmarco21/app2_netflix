@@ -1,12 +1,15 @@
 import "./src/config/env.js"; // ⬅️ Carga el .env PRIMERO
 import express from "express";
 import cors from "cors";
-import pool from "./src/config/basedatos.js"; // ⬅️ Importar pool (export default)
+
+// Importar rutas
+import pool from "./src/config/basedatos.js";
 import rutasUsuario from "./src/rutas/rutasUsuarios.js";
 import rutasProgreso from "./src/rutas/rutasProgreso.js";
 import rutasPerfiles from "./src/rutas/rutasPerfiles.js";
 import rutasContenido from "./src/rutas/rutasContenido.js";
 import tmdbRutas from "./src/rutas/tmdbRutas.js";
+import testRutas from "./src/rutas/testRutas.js";
 import rutasMiLista from "./src/rutas/rutasMiLista.js";
 import rutasCalificaciones from "./src/rutas/rutasCalificaciones.js";
 
@@ -20,6 +23,7 @@ app.use("/progreso", rutasProgreso);
 app.use("/perfiles", rutasPerfiles);
 app.use("/contenido", rutasContenido);
 app.use("/api/tmdb", tmdbRutas);
+app.use("/api/test", testRutas);
 app.use("/mi-lista", rutasMiLista);
 app.use("/calificaciones", rutasCalificaciones);
 
@@ -33,72 +37,113 @@ app.get("/", (req, res) => {
 });
 
 // Verificar tablas necesarias
-const verificarTablas = async () => {
+async function verificarTablas() {
   try {
-    // Verificar tabla mi_lista
-    const [tablasMiLista] = await pool.execute(
-      "SHOW TABLES LIKE 'mi_lista'"
-    );
+    const connection = await pool.getConnection();
     
-    if (tablasMiLista.length === 0) {
-      console.log('⚠️  Tabla mi_lista no encontrada. Creándola...');
-      await pool.execute(`
+    // Verificar tabla usuarios
+    const [usuarios] = await connection.execute('SHOW TABLES LIKE "usuarios"');
+    if (usuarios.length === 0) {
+      console.log('⚠️ Tabla usuarios no encontrada, creándola...');
+      await connection.execute(`
+        CREATE TABLE usuarios (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          nombre VARCHAR(100) NOT NULL,
+          fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('✅ Tabla usuarios creada');
+    }
+    
+    // Verificar tabla perfiles
+    const [perfiles] = await connection.execute('SHOW TABLES LIKE "perfiles"');
+    if (perfiles.length === 0) {
+      console.log('⚠️ Tabla perfiles no encontrada, creándola...');
+      await connection.execute(`
+        CREATE TABLE perfiles (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          usuario_id INT NOT NULL,
+          nombre VARCHAR(50) NOT NULL,
+          avatar VARCHAR(255) DEFAULT 'perfil1.jpg',
+          pin VARCHAR(4) DEFAULT NULL,
+          es_ninos BOOLEAN DEFAULT FALSE,
+          fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+        )
+      `);
+      console.log('✅ Tabla perfiles creada');
+    }
+    
+    // Verificar tabla mi_lista
+    const [miLista] = await connection.execute('SHOW TABLES LIKE "mi_lista"');
+    if (miLista.length === 0) {
+      console.log('⚠️ Tabla mi_lista no encontrada, creándola...');
+      await connection.execute(`
         CREATE TABLE mi_lista (
           id INT AUTO_INCREMENT PRIMARY KEY,
-          id_perfil INT NOT NULL,
-          id_contenido VARCHAR(50) NOT NULL,
-          titulo VARCHAR(255) NOT NULL,
-          imagen TEXT,
-          tipo ENUM('pelicula', 'serie') NOT NULL,
+          perfil_id INT NOT NULL,
+          contenido_id VARCHAR(50) NOT NULL,
+          tipo_contenido ENUM('movie', 'tv') NOT NULL,
           fecha_agregado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE KEY unique_perfil_contenido (id_perfil, id_contenido),
-          FOREIGN KEY (id_perfil) REFERENCES perfiles(id) ON DELETE CASCADE
+          FOREIGN KEY (perfil_id) REFERENCES perfiles(id) ON DELETE CASCADE,
+          UNIQUE KEY unique_contenido_perfil (perfil_id, contenido_id)
         )
       `);
-      console.log('✅ Tabla mi_lista creada exitosamente');
-    } else {
-      console.log('✅ Tabla mi_lista encontrada');
+      console.log('✅ Tabla mi_lista creada');
     }
-
-    // Verificar tabla calificaciones
-    const [tablasCalificaciones] = await pool.execute(
-      "SHOW TABLES LIKE 'calificaciones'"
-    );
     
-    if (tablasCalificaciones.length === 0) {
-      console.log('⚠️  Tabla calificaciones no encontrada. Creándola...');
-      await pool.execute(`
+    // Verificar tabla calificaciones
+    const [calificaciones] = await connection.execute('SHOW TABLES LIKE "calificaciones"');
+    if (calificaciones.length === 0) {
+      console.log('⚠️ Tabla calificaciones no encontrada, creándola...');
+      await connection.execute(`
         CREATE TABLE calificaciones (
           id INT AUTO_INCREMENT PRIMARY KEY,
-          id_perfil INT NOT NULL,
-          id_contenido VARCHAR(50) NOT NULL,
-          calificacion INT NOT NULL CHECK (calificacion >= 1 AND calificacion <= 5),
-          fecha_calificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          UNIQUE KEY unique_perfil_contenido_calificacion (id_perfil, id_contenido),
-          FOREIGN KEY (id_perfil) REFERENCES perfiles(id) ON DELETE CASCADE
+          perfil_id INT NOT NULL,
+          contenido_id VARCHAR(50) NOT NULL,
+          tipo_contenido ENUM('movie', 'tv') NOT NULL,
+          calificacion ENUM('like', 'dislike') NOT NULL,
+          fecha_calificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (perfil_id) REFERENCES perfiles(id) ON DELETE CASCADE,
+          UNIQUE KEY unique_calificacion_perfil (perfil_id, contenido_id)
         )
       `);
-      console.log('✅ Tabla calificaciones creada exitosamente');
-    } else {
-      console.log('✅ Tabla calificaciones encontrada');
+      console.log('✅ Tabla calificaciones creada');
     }
+    
+    connection.release();
+    console.log('🗄️ Verificación de tablas completada');
+    
   } catch (error) {
-    console.error('❌ Error al verificar/crear tablas:', error);
+    console.error('❌ Error verificando tablas:', error);
   }
-};
+}
 
-// Verificar conexión a la base de datos y tablas
+// Conectar a la base de datos y verificar tablas
 pool.getConnection()
   .then(async (connection) => {
-    console.log('✅ Conectado a MySQL (XAMPP)');
+    console.log('🔗 Conectado a MySQL');
     
-    // Verificar tablas existentes
+    // Verificar qué tablas existen
     const [tablas] = await connection.execute('SHOW TABLES');
     const nombresTablas = tablas.map(tabla => Object.values(tabla)[0]);
+    console.log('📋 Tablas encontradas:', nombresTablas);
     
     if (nombresTablas.includes('usuarios')) {
       const [columnasUsuarios] = await connection.execute('SHOW COLUMNS FROM usuarios');
       console.log('✅ Tabla usuarios encontrada con columnas:', columnasUsuarios.map(col => col.Field));
+    }
+    
+    if (nombresTablas.includes('mi_lista')) {
+      const [columnasMiLista] = await connection.execute('SHOW COLUMNS FROM mi_lista');
+      console.log('✅ Tabla mi_lista encontrada con columnas:', columnasMiLista.map(col => col.Field));
+    }
+    
+    if (nombresTablas.includes('calificaciones')) {
+      const [columnasCalificaciones] = await connection.execute('SHOW COLUMNS FROM calificaciones');
+      console.log('✅ Tabla calificaciones encontrada con columnas:', columnasCalificaciones.map(col => col.Field));
     }
     
     if (nombresTablas.includes('perfiles')) {

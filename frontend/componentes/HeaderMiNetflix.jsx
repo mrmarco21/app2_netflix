@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function HeaderMiNetflix({ onMenuPress }) {
+export default function HeaderMiNetflix({ }) {
   return (
     <View style={styles.header}>
       {/* <TouchableOpacity 
@@ -10,7 +10,7 @@ export default function HeaderMiNetflix({ onMenuPress }) {
         onPress={onPerfilPress}
       >
         {perfilActual && (
-          <>
+          <
             <Image 
               source={perfilActual.avatar} 
               style={styles.avatarPequeno}
@@ -24,12 +24,12 @@ export default function HeaderMiNetflix({ onMenuPress }) {
           </TouchableOpacity> */}
       <Text style={styles.titulo}>Mi Netflix</Text>
 
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={styles.menuButton}
         onPress={onMenuPress}
       >
         <Ionicons name="menu" size={28} color="white" />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   );
 }

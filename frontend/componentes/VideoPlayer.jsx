@@ -74,7 +74,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 60,
-    backgroundColor: 'transparent',
-    background: 'linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.8))',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
   },
 });

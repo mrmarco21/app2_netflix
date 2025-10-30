@@ -17,6 +17,7 @@ import ModalPinPerfil from '../componentes/ModalPinPerfil';
 import {
   obtenerPeliculasPopulares,
   obtenerSeriesPopulares,
+  obtenerSeriesTendencia,
   obtenerPeliculasPorGenero,
   obtenerSeriesPorGenero
 } from '../servicios/tmdbService';
@@ -486,16 +487,19 @@ export default function InicioApp({ navigation, route }) {
         }
 
       } else if (filtro === 'Mi lista') {
-        // Mantener el contenido de Mi lista como estaba
-        nuevasSecciones = [{
-          titulo: 'Mi lista',
-          contenido: [
-            { id: 1, titulo: 'Casa de papel', imagen: 'https://via.placeholder.com/150x200/FF6347/FFFFFF?text=CASA+PAPEL' },
-            { id: 2, titulo: 'Dark', imagen: 'https://via.placeholder.com/150x200/2F4F4F/FFFFFF?text=DARK' },
-            { id: 3, titulo: 'Ozark', imagen: 'https://via.placeholder.com/150x200/1E90FF/FFFFFF?text=OZARK' },
-            { id: 4, titulo: 'Mindhunter', imagen: 'https://via.placeholder.com/150x200/8B4513/FFFFFF?text=MINDHUNTER' }
-          ]
-        }];
+        // Cargar películas populares para Mi lista
+        const peliculasPopulares = await obtenerPeliculasPopulares(1);
+        if (peliculasPopulares.results && peliculasPopulares.results.length > 0) {
+          nuevasSecciones = [{
+            titulo: 'Mi lista',
+            contenido: peliculasPopulares.results.slice(0, 4).map(item => ({
+              id: item.id,
+              titulo: item.title,
+              imagen: item.poster_url,
+              tipo: 'pelicula'
+            }))
+          }];
+        }
       }
 
       setContenidoDestacado(nuevoContenidoDestacado);
@@ -514,17 +518,28 @@ export default function InicioApp({ navigation, route }) {
     cargarContenido(filtroActivo);
   }, [filtroActivo]);
 
-  // Datos de ejemplo para "Continuar viendo" (mantener como estaba)
-  const ejemploContinuarViendo = [
-    { id: 1, titulo: 'Death Note', imagen: 'https://via.placeholder.com/150x200/8B0000/FFFFFF?text=DEATH+NOTE', progreso: 0.65 },
-    { id: 2, titulo: 'Stranger Things', imagen: 'https://via.placeholder.com/150x200/000080/FFFFFF?text=STRANGER+THINGS', progreso: 0.30 },
-    { id: 3, titulo: 'The Witcher', imagen: 'https://via.placeholder.com/150x200/4B0082/FFFFFF?text=THE+WITCHER', progreso: 0.85 },
-    { id: 4, titulo: 'Breaking Bad', imagen: 'https://via.placeholder.com/150x200/228B22/FFFFFF?text=BREAKING+BAD', progreso: 0.45 }
-  ];
-
-  // Cargar "Continuar viendo" al montar el componente
+  // Cargar "Continuar viendo" con datos reales
   useEffect(() => {
-    setContinuarViendo(ejemploContinuarViendo);
+    const cargarContinuarViendo = async () => {
+      try {
+        const seriesTendencia = await obtenerSeriesTendencia(1);
+        if (seriesTendencia.results && seriesTendencia.results.length > 0) {
+          const continuarViendoData = seriesTendencia.results.slice(0, 4).map((item, index) => ({
+            id: item.id,
+            titulo: item.name,
+            imagen: item.poster_url,
+            progreso: [0.65, 0.30, 0.85, 0.45][index] || 0.50 // Progreso simulado
+          }));
+          setContinuarViendo(continuarViendoData);
+        }
+      } catch (error) {
+        console.error('Error al cargar continuar viendo:', error);
+        // Fallback con datos mínimos si hay error
+        setContinuarViendo([]);
+      }
+    };
+    
+    cargarContinuarViendo();
   }, []);
 
   // Categorías para el modal (actualizadas con las nuevas categorías)

@@ -1,5 +1,5 @@
 // URL base de la API
-const API_BASE_URL = "http://192.168.18.31:3000";
+const API_BASE_URL = "http://localhost:3000";
 
 // Función para registrar un nuevo usuario
 export const registrarUsuario = async (nombres, correo, contrasena) => {

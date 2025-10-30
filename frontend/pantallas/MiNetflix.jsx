@@ -5,17 +5,25 @@ import { useMiLista } from '../contextos/MiListaContext';
 import { useUsuario } from '../contextos/UsuarioContext';
 import HeaderMiNetflix from '../componentes/HeaderMiNetflix';
 import PerfilActual from '../componentes/PerfilActual';
-import ListaFavoritos from '../componentes/ListaFavoritos';
 import ModalPerfiles from '../componentes/ModalPerfiles';
+import ListaFavoritos from '../componentes/ListaFavoritos';
+
 import ModalConfiguracion from '../componentes/ModalConfiguracion';
 import ModalPinPerfil from '../componentes/ModalPinPerfil';
 import NavegacionInferior from '../componentes/NavegacionInferior';
+//nuevos componentes
+import BotonesAcciones from '../componentes/BotonesAcciones';
+import SeccionHistorial from '../componentes/SeccionHistorial';
+import SeccionMasFunciones from '../componentes/SeccionMasFunciones';
 
 export default function MiNetflix({ navigation }) {
   const [modalPerfilesVisible, setModalPerfilesVisible] = useState(false);
-  const [modalConfigVisible, setModalConfigVisible] = useState(false);
+  // const [modalConfigVisible, setModalConfigVisible] = useState(false);
   const [modalPinVisible, setModalPinVisible] = useState(false);
   const [perfilConPin, setPerfilConPin] = useState(null);
+  const [historial, setHistorial] = useState([]);	
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
+  const [paraAdultos, setParaAdultos] = useState(false);
 
   const { miLista, quitarDeMiLista, cargando } = useMiLista();
   const { perfilActual, perfilesDisponibles, cambiarPerfil, cargarPerfilesDisponibles, cerrarSesion, usuario } = useUsuario();
@@ -35,6 +43,42 @@ export default function MiNetflix({ navigation }) {
     return () => backHandler.remove(); // Limpia el listener al desmontar
   }, [navigation]);
 
+
+  useEffect(() => {
+    const cargarHistorial = async () => {
+      if (!perfilActual) return;
+      
+      setCargandoHistorial(true);
+      try {
+        const historialEjemplo = [
+          {
+            id: 1,
+            titulo: 'El Amateur',
+            poster: 'https://image.tmdb.org/t/p/w500/example1.jpg',
+          },
+          {
+            id: 2,
+            titulo: 'La llave de Sarah',
+            poster: 'https://image.tmdb.org/t/p/w500/example2.jpg',
+          },
+          {
+            id: 3,
+            titulo: 'Matabot T1',
+            poster: 'https://image.tmdb.org/t/p/w500/example3.jpg',
+          },
+        ];
+        
+        setHistorial(historialEjemplo);
+      } catch (error) {
+        console.error('Error al cargar historial:', error);
+        setHistorial([]);
+      } finally {
+        setCargandoHistorial(false);
+      }
+    };
+
+    cargarHistorial();
+  }, [perfilActual]);
   // Imágenes de perfil disponibles
   const imagenesPerfiles = [
     require('../assets/perfil1.jpg'),
@@ -59,8 +103,6 @@ export default function MiNetflix({ navigation }) {
     avatar: obtenerImagenPerfil(perfil.id)
   }));
 
-  // Datos de ejemplo para contenido favorito - REMOVIDO
-  // Ahora usamos miLista del contexto que viene del backend
 
   const handleCambiarPerfil = async (perfil) => {
     // Verificar si el perfil tiene PIN
@@ -88,7 +130,6 @@ export default function MiNetflix({ navigation }) {
   };
 
   const handleCerrarSesion = async () => {
-    setModalConfigVisible(false);
     await cerrarSesion();
     navigation.reset({
       index: 0,
@@ -96,18 +137,16 @@ export default function MiNetflix({ navigation }) {
     });
   };
 
+  const handleToggleParaAdultos = (valor) => {
+  setParaAdultos(valor);
+  // Aquí puedes guardar la preferencia en tu backend
+  console.log('Para adultos:', valor);
+};
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor="#000" translucent={false} />
       
-      <HeaderMiNetflix 
-        onMenuPress={() => setModalConfigVisible(true)}
-        perfilActual={perfilActual ? {
-          ...perfilActual,
-          avatar: obtenerImagenPerfil(perfilActual.id)
-        } : null}
-        onPerfilPress={() => setModalPerfilesVisible(true)}
-      />
+      <HeaderMiNetflix />
       
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <PerfilActual 
@@ -117,50 +156,13 @@ export default function MiNetflix({ navigation }) {
           } : null}
           onPerfilPress={() => setModalPerfilesVisible(true)}
         />
-        
-        <View style={styles.notificacionesContainer}>
-          <View style={styles.notificacionItem}>
-            <View style={styles.iconoNotificacion}>
-              <Text style={styles.iconoTexto}>🔔</Text>
-            </View>
-            <View style={styles.notificacionTexto}>
-              <Text style={styles.notificacionTitulo}>Notificaciones</Text>
-              <Text style={styles.verTodos}>Ver todos</Text>
-            </View>
-          </View>
-          
-          <View style={styles.notificacionItem}>
-            <View style={styles.iconoReloj}>
-              <Text style={styles.iconoTexto}>⏳</Text>
-            </View>
-            <View style={styles.notificacionTexto}>
-              <Text style={styles.notificacionTitulo}>Última oportunidad para verlos</Text>
-              <Text style={styles.notificacionSubtitulo}>Están por irse.</Text>
-              <Text style={styles.fecha}>15 sept</Text>
-            </View>
-          </View>
-          
-          <View style={styles.notificacionItem}>
-            <View style={styles.iconoInfluencer}>
-              <Text style={styles.iconoTexto}>📱</Text>
-            </View>
-            <View style={styles.notificacionTexto}>
-              <Text style={styles.notificacionTitulo}>Qué ver</Text>
-              <Text style={styles.notificacionSubtitulo}>Explora tus recomendaciones.</Text>
-              <Text style={styles.fecha}>10 oct</Text>
-            </View>
-          </View>
-        </View>
 
-        <View style={styles.descargasContainer}>
-          <View style={styles.descargasHeader}>
-            <Text style={styles.descargasIcono}>⬇️</Text>
-            <View style={styles.descargasTexto}>
-              <Text style={styles.descargasTitulo}>Descargas</Text>
-              <Text style={styles.descargasSubtitulo}>Las películas y series que descargues aparecen aquí.</Text>
-            </View>
-          </View>
-        </View>
+      <BotonesAcciones navigation={navigation} />
+      <SeccionHistorial 
+          historial={historial}
+          navigation={navigation}
+          cargando={cargandoHistorial}
+        />
         
         <ListaFavoritos 
           contenido={miLista}
@@ -168,7 +170,15 @@ export default function MiNetflix({ navigation }) {
           onEliminar={(contenidoId) => quitarDeMiLista(contenidoId)}
           cargando={cargando}
         />
+        <SeccionMasFunciones 
+          navigation={navigation}
+          paraAdultos={paraAdultos}
+          onToggleParaAdultos={handleToggleParaAdultos}
+          onCerrarSesion={handleCerrarSesion}
+        />
       </ScrollView>
+
+
       
       <NavegacionInferior navigation={navigation} activeTab="MiNetflix" />
       
@@ -181,12 +191,12 @@ export default function MiNetflix({ navigation }) {
         onActualizarPerfiles={() => cargarPerfilesDisponibles(usuario?.id)}
       />
       
-      <ModalConfiguracion
+      {/* <ModalConfiguracion
         visible={modalConfigVisible}
         onCerrar={() => setModalConfigVisible(false)}
         onCerrarSesion={handleCerrarSesion}
         navigation={navigation}
-      />
+      /> */}
 
       <ModalPinPerfil
         visible={modalPinVisible}
@@ -205,95 +215,5 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-  },
-  notificacionesContainer: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-  },
-  notificacionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  iconoNotificacion: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#333',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  iconoReloj: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#E50914',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  iconoInfluencer: {
-    width: 50,
-    height: 50,
-    backgroundColor: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  iconoTexto: {
-    fontSize: 20,
-  },
-  notificacionTexto: {
-    flex: 1,
-  },
-  notificacionTitulo: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  notificacionSubtitulo: {
-    color: '#999',
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  fecha: {
-    color: '#666',
-    fontSize: 12,
-  },
-  verTodos: {
-    color: '#999',
-    fontSize: 14,
-  },
-  descargasContainer: {
-    paddingHorizontal: 15,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  descargasHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  descargasIcono: {
-    fontSize: 24,
-    marginRight: 15,
-  },
-  descargasTexto: {
-    flex: 1,
-  },
-  descargasTitulo: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  descargasSubtitulo: {
-    color: '#999',
-    fontSize: 14,
   },
 });

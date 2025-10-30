@@ -1,6 +1,8 @@
 import express from "express";
 import axios from "axios";
 
+console.log("🚀 Cargando módulo tmdbRutas.js...");
+
 const router = express.Router();
 
 const TMDB_BEARER_TOKEN = process.env.TMDB_BEARER_TOKEN;
@@ -12,6 +14,7 @@ console.log("🔑 Token cargado:", TMDB_BEARER_TOKEN ? "✅ SÍ" : "❌ NO (unde
 // 🧩 Función auxiliar para evitar repetir código
 const fetchFromTMDB = async (endpoint, params = {}) => {
   try {
+    console.log(`🔍 Haciendo petición a TMDB: ${BASE_URL}${endpoint}`, params);
     const response = await axios.get(`${BASE_URL}${endpoint}`, {
       params: { language: "es-ES", ...params },
       headers: {
@@ -19,9 +22,12 @@ const fetchFromTMDB = async (endpoint, params = {}) => {
         Accept: "application/json",
       },
     });
+    console.log(`✅ Respuesta exitosa de TMDB para ${endpoint}`);
     return response.data;
   } catch (error) {
-    console.error("Error al consultar TMDB:", error.response?.data || error.message);
+    console.error("❌ Error al consultar TMDB:", error.response?.data || error.message);
+    console.error("❌ URL completa:", `${BASE_URL}${endpoint}`);
+    console.error("❌ Parámetros:", params);
     throw error;
   }
 };
@@ -61,6 +67,29 @@ const formatContent = (items) => {
 // 🎬 PELÍCULAS
 // ========================================
 
+// Ruta de prueba simple
+router.get("/test", async (req, res) => {
+  console.log("🧪 Ruta de prueba TMDB llamada");
+  console.log("🔑 Token disponible:", TMDB_BEARER_TOKEN ? "SÍ" : "NO");
+  console.log("🌐 BASE_URL:", BASE_URL);
+  
+  try {
+    console.log("🔍 Haciendo petición de prueba a TMDB...");
+    const response = await axios.get(`${BASE_URL}/genre/movie/list`, {
+      params: { language: "es-ES" },
+      headers: {
+        Authorization: `Bearer ${TMDB_BEARER_TOKEN}`,
+        Accept: "application/json",
+      },
+    });
+    console.log("✅ Respuesta exitosa de TMDB");
+    res.json({ success: true, data: response.data });
+  } catch (error) {
+    console.error("❌ Error en prueba TMDB:", error.response?.data || error.message);
+    res.status(500).json({ error: "Error en prueba TMDB", details: error.message });
+  }
+});
+
 // Películas populares
 router.get("/peliculas/populares", async (req, res) => {
   try {
@@ -72,8 +101,9 @@ router.get("/peliculas/populares", async (req, res) => {
       total_pages: data.total_pages,
       total_results: data.total_results
     });
-  } catch {
-    res.status(500).json({ error: "Error al obtener películas populares" });
+  } catch (error) {
+    console.error("Error en ruta películas populares:", error.message);
+    res.status(500).json({ error: "Error al obtener películas populares", details: error.message });
   }
 });
 
@@ -452,8 +482,9 @@ router.get("/series/tendencia", async (req, res) => {
       page: data.page,
       total_pages: data.total_pages
     });
-  } catch {
-    res.status(500).json({ error: "Error al obtener series en tendencia" });
+  } catch (error) {
+    console.error("Error en ruta series tendencia:", error.message);
+    res.status(500).json({ error: "Error al obtener series en tendencia", details: error.message });
   }
 });
 
