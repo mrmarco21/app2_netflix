@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:3000/api/tmdb"; // Para web usar localhost
+const BASE_URL = "http://192.168.18.31:3000/api/tmdb"; // Para web usar localhost
 
 // ========================================
 // 🏠 PANTALLA DE INICIO
