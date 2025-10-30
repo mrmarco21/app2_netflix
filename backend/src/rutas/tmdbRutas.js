@@ -7,7 +7,7 @@ const TMDB_BEARER_TOKEN = process.env.TMDB_BEARER_TOKEN;
 const BASE_URL = "https://api.themoviedb.org/3";
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
-console.log("🔑 Token cargado:", TMDB_BEARER_TOKEN ? "✅ SÍ" : "❌ NO (undefined)");
+// console.log("🔑 Token cargado:", TMDB_BEARER_TOKEN ? "✅ SÍ" : "❌ NO (undefined)");
 
 // 🧩 Función auxiliar para evitar repetir código
 const fetchFromTMDB = async (endpoint, params = {}) => {

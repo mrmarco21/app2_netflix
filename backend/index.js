@@ -80,7 +80,7 @@ const verificarTablas = async () => {
       `);
       console.log('✅ Tabla calificaciones creada exitosamente');
     } else {
-      console.log('✅ Tabla calificaciones encontrada');
+      // console.log('✅ Tabla calificaciones encontrada');
     }
   } catch (error) {
     console.error('❌ Error al verificar/crear tablas:', error);
@@ -98,12 +98,12 @@ pool.getConnection()
     
     if (nombresTablas.includes('usuarios')) {
       const [columnasUsuarios] = await connection.execute('SHOW COLUMNS FROM usuarios');
-      console.log('✅ Tabla usuarios encontrada con columnas:', columnasUsuarios.map(col => col.Field));
+      // console.log('✅ Tabla usuarios encontrada con columnas:', columnasUsuarios.map(col => col.Field));
     }
     
     if (nombresTablas.includes('perfiles')) {
       const [columnasPerfiles] = await connection.execute('SHOW COLUMNS FROM perfiles');
-      console.log('✅ Tabla perfiles encontrada con columnas:', columnasPerfiles.map(col => col.Field));
+      // console.log('✅ Tabla perfiles encontrada con columnas:', columnasPerfiles.map(col => col.Field));
     }
     
     connection.release();

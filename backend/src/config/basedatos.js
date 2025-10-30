@@ -14,7 +14,7 @@ const pool = mysql.createPool({
 (async () => {
   try {
     const connection = await pool.getConnection();
-    console.log("✅ Conectado a MySQL (XAMPP)");
+    // console.log("✅ Conectado a MySQL (XAMPP)");
     
     // Verificar que la tabla usuarios existe con el esquema correcto
     const [resultado] = await connection.execute(`
@@ -24,7 +24,7 @@ const pool = mysql.createPool({
       AND TABLE_NAME = 'usuarios'
     `);
     
-    console.log("✅ Tabla usuarios encontrada con columnas:", resultado.map(col => col.COLUMN_NAME));
+    // console.log("✅ Tabla usuarios encontrada con columnas:", resultado.map(col => col.COLUMN_NAME));
     
     // Verificar que la tabla perfiles existe
     const [resultadoPerfiles] = await connection.execute(`
@@ -35,7 +35,7 @@ const pool = mysql.createPool({
     `);
     
     if (resultadoPerfiles.length > 0) {
-      console.log("✅ Tabla perfiles encontrada con columnas:", resultadoPerfiles.map(col => col.COLUMN_NAME));
+      // console.log("✅ Tabla perfiles encontrada con columnas:", resultadoPerfiles.map(col => col.COLUMN_NAME));
     } else {
       console.log("⚠️ Tabla perfiles no encontrada. Asegúrate de crearla.");
     }
