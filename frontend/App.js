@@ -17,7 +17,8 @@ import MiNetflix from "./pantallas/MiNetflix";
 import DetallePelicula from "./pantallas/DetallePelicula";
 import CategoriaCompleta from "./pantallas/CategoriaCompleta"
 import ModalCalificacion from "./componentes/ModalCalificacion";
-
+import MiLista from './pantallas/MiLista';
+import Historial from './pantallas/Historial';
 // Importar la pantalla de prueba TMDB
 import PantallaPruebaTMDB from "./pantallas/PantallaPruebaTMDB"
 import NetflixIntro from "./pantallas/NetflixIntro";
@@ -49,6 +50,8 @@ function AppNavigator() {
       <Stack.Screen name="DetallePelicula" component={DetallePelicula}/>
       <Stack.Screen name="CategoriaCompleta" component={CategoriaCompleta}/>
       <Stack.Screen name="ModalCalificacion" component={ModalCalificacion}/>
+      <Stack.Screen name="MiLista" component={MiLista}/>
+      <Stack.Screen name="Historial" component={Historial}/>
     </Stack.Navigator>
   );
 }

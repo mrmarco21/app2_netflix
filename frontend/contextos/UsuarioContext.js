@@ -143,18 +143,30 @@ export const UsuarioProvider = ({ children }) => {
   }, [perfilActual]);
 
   // Función para cerrar sesión
-  const cerrarSesion = useCallback(async () => {
+const cerrarSesion = useCallback(async () => {
+  try {
+    console.log('🔴 Cerrando sesión desde contexto...');
+    
+    // Limpiar AsyncStorage primero
+    await limpiarSesion();
+    console.log('✅ AsyncStorage limpiado');
+    
+    // Luego limpiar todos los estados
     setUsuario(null);
     setPerfilActual(null);
     setPerfilesDisponibles([]);
     setSesionIniciada(false);
-    await limpiarSesion();
-  }, []);
-
-  // Cargar sesión al inicializar la app
-  useEffect(() => {
-    cargarSesion();
-  }, []);
+    setRequiereVerificacionPin(false);
+    setTiempoUltimaActividad(Date.now());
+    
+    console.log('✅ Estados del contexto limpiados');
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Error al cerrar sesión:', error);
+    return false;
+  }
+}, []);
 
   // Cargar perfiles cuando se establece un usuario
   useEffect(() => {

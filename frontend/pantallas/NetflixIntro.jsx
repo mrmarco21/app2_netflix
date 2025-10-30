@@ -3,10 +3,16 @@ import { Animated, View, Text, StyleSheet, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function NetflixIntro({ navigation }) {
+    console.log('🎬 NetflixIntro cargado');
+  
+  useEffect(() => {
+    console.log('🎬 NetflixIntro montado');
+  }, []);
   const letters = "MI NETFLIX".split("");
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.8)).current;
   const progressWidth = useRef(new Animated.Value(0)).current;
+  
 
   // animaciones individuales para cada letra
   const letterAnimations = useRef(
@@ -115,7 +121,9 @@ export default function NetflixIntro({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "black",
+    backgroundColor: '#000', // Fondo negro
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flex: 1,

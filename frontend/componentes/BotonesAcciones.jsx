@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Heart, Clock, Share2 } from 'lucide-react-native';
 
-export default function BotonesAcciones({ navigation }) {
+export default function BotonesAcciones({ navigation, onCompartir }) {
   return (
     <View style={styles.container}>
       <TouchableOpacity 
@@ -26,11 +26,9 @@ export default function BotonesAcciones({ navigation }) {
       </TouchableOpacity>
 
       <TouchableOpacity 
-        style={styles.boton}
-        onPress={() => {
-          console.log('Compartir presionado');
-        }}
-      >
+          style={styles.boton}
+          onPress={onCompartir}
+        >
         <View style={styles.iconContainer}>
           <Share2 color="#fff" size={28} fill="#95E1D3" />
         </View>

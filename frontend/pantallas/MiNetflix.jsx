@@ -15,6 +15,7 @@ import NavegacionInferior from '../componentes/NavegacionInferior';
 import BotonesAcciones from '../componentes/BotonesAcciones';
 import SeccionHistorial from '../componentes/SeccionHistorial';
 import SeccionMasFunciones from '../componentes/SeccionMasFunciones';
+import ModalCompartir from '../componentes/ModalCompartir';
 
 export default function MiNetflix({ navigation }) {
   const [modalPerfilesVisible, setModalPerfilesVisible] = useState(false);
@@ -24,6 +25,7 @@ export default function MiNetflix({ navigation }) {
   const [historial, setHistorial] = useState([]);	
   const [cargandoHistorial, setCargandoHistorial] = useState(false)
   const [paraAdultos, setParaAdultos] = useState(false);
+  const [modalCompartirVisible, setModalCompartirVisible] = useState(false);
 
   const { miLista, quitarDeMiLista, cargando } = useMiLista();
   const { perfilActual, perfilesDisponibles, cambiarPerfil, cargarPerfilesDisponibles, cerrarSesion, usuario } = useUsuario();
@@ -129,13 +131,33 @@ export default function MiNetflix({ navigation }) {
     setPerfilConPin(null);
   };
 
-  const handleCerrarSesion = async () => {
-    await cerrarSesion();
+const handleCerrarSesion = async () => {
+  try {
+    console.log('🔴 Iniciando cierre de sesión...');
+    
+    // Cerrar sesión del contexto
+    const sesionCerrada = await cerrarSesion();
+    
+    if (sesionCerrada) {
+      console.log('✅ Sesión cerrada, navegando a NetflixIntro...');
+      
+      // Navegar al intro
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'NetflixIntro' }],
+      });
+    } else {
+      console.error('❌ No se pudo cerrar la sesión correctamente');
+    }
+  } catch (error) {
+    console.error('❌ Error al cerrar sesión:', error);
+    // Intentar navegar de todas formas
     navigation.reset({
       index: 0,
       routes: [{ name: 'NetflixIntro' }],
     });
-  };
+  }
+};
 
   const handleToggleParaAdultos = (valor) => {
   setParaAdultos(valor);
@@ -149,34 +171,50 @@ export default function MiNetflix({ navigation }) {
       <HeaderMiNetflix />
       
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <PerfilActual 
-          perfil={perfilActual ? {
-            ...perfilActual,
-            avatar: obtenerImagenPerfil(perfilActual.id)
-          } : null}
-          onPerfilPress={() => setModalPerfilesVisible(true)}
-        />
+  {perfilActual && (
+    <>
+      <PerfilActual 
+        perfil={{
+          ...perfilActual,
+          avatar: obtenerImagenPerfil(perfilActual.id)
+        }}
+        onPerfilPress={() => setModalPerfilesVisible(true)}
+      />
 
-      <BotonesAcciones navigation={navigation} />
+      <BotonesAcciones 
+      navigation={navigation} 
+      onCompartir={() => setModalCompartirVisible(true)}
+      />
+      
       <SeccionHistorial 
-          historial={historial}
-          navigation={navigation}
-          cargando={cargandoHistorial}
-        />
+        historial={historial}
+        navigation={navigation}
+        cargando={cargandoHistorial}
+      />
+      
+      <ListaFavoritos 
+        contenido={miLista}
+        navigation={navigation}
+        onEliminar={(contenidoId) => quitarDeMiLista(contenidoId)}
+        cargando={cargando}
+      />
+      
+      <SeccionMasFunciones 
+        navigation={navigation}
+        paraAdultos={paraAdultos}
+        onToggleParaAdultos={handleToggleParaAdultos}
+        onCerrarSesion={handleCerrarSesion}
         
-        <ListaFavoritos 
-          contenido={miLista}
-          navigation={navigation}
-          onEliminar={(contenidoId) => quitarDeMiLista(contenidoId)}
-          cargando={cargando}
-        />
-        <SeccionMasFunciones 
-          navigation={navigation}
-          paraAdultos={paraAdultos}
-          onToggleParaAdultos={handleToggleParaAdultos}
-          onCerrarSesion={handleCerrarSesion}
-        />
-      </ScrollView>
+      />
+      <ModalCompartir
+        visible={modalCompartirVisible}
+        onCerrar={() => setModalCompartirVisible(false)}
+        perfilActual={perfilActual}
+      />
+    </>
+
+  )}
+</ScrollView>
 
 
       

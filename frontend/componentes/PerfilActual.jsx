@@ -3,6 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function PerfilActual({ perfil, onPerfilPress }) {
+   if (!perfil) {
+    return null; // O muestra un placeholder
+  }
   return (
     <View style={styles.container}>
       <TouchableOpacity 
