@@ -33,6 +33,7 @@ export default function ModalPinPerfil({
       if (resultado.success) {
         setPin('');
         onAccesoPermitido(perfil);
+        onCerrar(); // Cerrar el modal después de verificar correctamente
       } else {
         Alert.alert('PIN Incorrecto', 'El PIN ingresado no es válido');
         setPin('');

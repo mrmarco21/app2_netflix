@@ -3,6 +3,19 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function PerfilActual({ perfil, onPerfilPress }) {
+  // Log para debugging
+  console.log('🎭 PerfilActual renderizado con:', perfil ? {
+    id: perfil.id,
+    nombre: perfil.nombre,
+    hasAvatar: !!perfil.avatar
+  } : 'null');
+
+  // Si no hay perfil, no renderizar nada
+  if (!perfil) {
+    console.log('⚠️ PerfilActual: No hay perfil para mostrar');
+    return null;
+  }
+
   return (
     <View style={styles.container}>
       <TouchableOpacity 
