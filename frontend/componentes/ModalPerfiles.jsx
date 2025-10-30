@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ModalAdministrarPerfiles from './ModalAdministrarPerfiles';
 import ModalPinPerfil from './ModalPinPerfil';
 import { actualizarPinPerfil } from '../servicios/apiUsuarios';
+import { useUsuario } from '../contextos/UsuarioContext';
 
 export default function ModalPerfiles({
   visible,
@@ -25,6 +26,7 @@ export default function ModalPerfiles({
   const [mostrarAdministrar, setMostrarAdministrar] = useState(false);
   const [modalPinVisible, setModalPinVisible] = useState(false);
   const [perfilConPin, setPerfilConPin] = useState(null);
+  const { cambiarPerfil } = useUsuario();
 
   const cerrarAdministrar = () => {
     setMostrarAdministrar(false);
@@ -47,21 +49,29 @@ export default function ModalPerfiles({
     }
   };
 
-  const manejarSeleccionPerfil = (perfil) => {
+  const manejarSeleccionPerfil = async (perfil) => {
+    console.log('👤 Seleccionando perfil:', perfil.nombre, 'tiene PIN:', !!perfil.pin);
     // Verificar si el perfil tiene PIN configurado
     if (perfil.pin) {
       setPerfilConPin(perfil);
       setModalPinVisible(true);
     } else {
-      // Si no tiene PIN, seleccionar directamente
-      onSeleccionar(perfil);
+      // Si no tiene PIN, usar cambiarPerfil del contexto y seleccionar directamente
+      await cambiarPerfil(perfil);
+      onSeleccionar(null); // Pasar null ya que el perfil está en el contexto
+      onCerrar(); // Cerrar el modal después de seleccionar
     }
   };
 
-  const manejarAccesoPermitido = (perfil) => {
+  const manejarAccesoPermitido = async (perfil) => {
+    console.log('🔓 Acceso permitido para perfil:', perfil.nombre);
     setModalPinVisible(false);
     setPerfilConPin(null);
-    onSeleccionar(perfil);
+    // Usar cambiarPerfil del contexto para actualizar correctamente el estado global
+    await cambiarPerfil(perfil);
+    // Navegar sin pasar el perfil como parámetro ya que está en el contexto
+    onSeleccionar(null); // Pasar null para indicar que el perfil ya está en el contexto
+    onCerrar(); // Cerrar el modal de perfiles después de seleccionar
   };
 
   const cerrarModalPin = () => {

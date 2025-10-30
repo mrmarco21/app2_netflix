@@ -30,6 +30,14 @@ export default function MiNetflix({ navigation }) {
   const { miLista, quitarDeMiLista, cargando } = useMiLista();
   const { perfilActual, perfilesDisponibles, cambiarPerfil, cargarPerfilesDisponibles, cerrarSesion, usuario } = useUsuario();
 
+  // Log para debugging del estado del perfil
+  console.log('🏠 MiNetflix renderizado - Estado actual:', {
+    usuarioId: usuario?.id,
+    perfilActualId: perfilActual?.id,
+    perfilActualNombre: perfilActual?.nombre,
+    totalPerfiles: perfilesDisponibles?.length || 0
+  });
+
   // Controla el botón de atrás del dispositivo
   useEffect(() => {
     const backAction = () => {
@@ -118,7 +126,7 @@ export default function MiNetflix({ navigation }) {
     }
   };
 
-  const manejarAccesoPermitido = async () => {
+  const manejarAccesoPermitido = async (perfil) => {
     if (perfilConPin) {
       await cambiarPerfil(perfilConPin);
       setModalPinVisible(false);

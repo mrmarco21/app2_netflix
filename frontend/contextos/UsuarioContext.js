@@ -37,14 +37,36 @@ export const UsuarioProvider = ({ children }) => {
   // Función para cargar sesión desde AsyncStorage
   const cargarSesion = async () => {
     try {
+      console.log('🔍 Intentando cargar sesión desde AsyncStorage...');
       const sesionGuardada = await AsyncStorage.getItem('sesionUsuario');
       const sesionActiva = await AsyncStorage.getItem('sesionIniciada');
+      const perfilGuardado = await AsyncStorage.getItem('perfilActual');
+      
+      console.log('📋 Estado AsyncStorage:', {
+        sesionGuardada: !!sesionGuardada,
+        sesionActiva,
+        perfilGuardado: !!perfilGuardado
+      });
       
       if (sesionGuardada && sesionActiva === 'true') {
         const datosUsuario = JSON.parse(sesionGuardada);
-        setUsuario(datosUsuario);
-        setSesionIniciada(true);
+        console.log('👤 Restaurando usuario desde AsyncStorage:', datosUsuario.id);
+        
+        // Cargar perfil actual si existe ANTES de establecer el usuario
+        if (perfilGuardado) {
+          const perfilActualData = JSON.parse(perfilGuardado);
+          console.log('📱 Cargando perfil actual desde AsyncStorage:', perfilActualData.nombre);
+          setPerfilActual(perfilActualData);
+        } else {
+          console.log('⚠️ No hay perfil guardado en AsyncStorage');
+        }
+        
+        // Establecer usuario como restauración de sesión
+        await establecerUsuario(datosUsuario, true);
+        
         return true;
+      } else {
+        console.log('❌ No hay sesión válida en AsyncStorage');
       }
       return false;
     } catch (error) {
@@ -58,50 +80,118 @@ export const UsuarioProvider = ({ children }) => {
     try {
       await AsyncStorage.removeItem('sesionUsuario');
       await AsyncStorage.removeItem('sesionIniciada');
+      await AsyncStorage.removeItem('perfilActual');
+      await AsyncStorage.removeItem('ultimaActividad');
     } catch (error) {
       console.error('Error al limpiar sesión:', error);
     }
   };
 
   // Función para establecer el usuario logueado
-  const establecerUsuario = async (datosUsuario) => {
+  const establecerUsuario = async (datosUsuario, esRestauracionSesion = false) => {
+    console.log('👤 Estableciendo nuevo usuario:', datosUsuario.id, esRestauracionSesion ? '(restaurando sesión)' : '(nuevo login)');
+    
+    // Solo limpiar estado anterior si NO es una restauración de sesión
+    if (!esRestauracionSesion) {
+      console.log('🧹 Limpiando estado anterior para nuevo login');
+      setPerfilActual(null);
+      setPerfilesDisponibles([]);
+      setRequiereVerificacionPin(false);
+      setTiempoUltimaActividad(Date.now());
+    } else {
+      console.log('🔄 Restaurando sesión, preservando estado existente');
+    }
+    
     setUsuario(datosUsuario);
     setSesionIniciada(true);
-    await guardarSesion(datosUsuario);
+    
+    // Solo guardar sesión si no es una restauración
+    if (!esRestauracionSesion) {
+      await guardarSesion(datosUsuario);
+    }
+    
+    console.log('✅ Usuario establecido correctamente');
   };
 
   // Función para establecer el perfil actual
-  const establecerPerfilActual = (perfil) => {
+  const establecerPerfilActual = async (perfil) => {
     setPerfilActual(perfil);
+    
+    // Guardar perfil actual en AsyncStorage si existe
+    if (perfil) {
+      try {
+        await AsyncStorage.setItem('perfilActual', JSON.stringify(perfil));
+        console.log('💾 Perfil establecido y guardado en AsyncStorage:', perfil.nombre);
+      } catch (error) {
+        console.error('Error al guardar perfil en AsyncStorage:', error);
+      }
+    }
   };
 
   // Función para cargar perfiles disponibles del usuario
   const cargarPerfilesDisponibles = useCallback(async (idUsuario) => {
-    if (!idUsuario) return;
+    if (!idUsuario) {
+      setPerfilesDisponibles([]);
+      return;
+    }
     
     try {
       setCargandoPerfiles(true);
+      console.log('🔄 Cargando perfiles para usuario:', idUsuario);
+      
+      // Guardar el perfil actual antes de limpiar (si existe)
+      const perfilActualAnterior = perfilActual;
+      console.log('💾 Perfil actual antes de cargar:', perfilActualAnterior?.nombre || 'ninguno');
+      
+      // Limpiar perfiles anteriores antes de cargar nuevos
+      setPerfilesDisponibles([]);
+      
       const resultado = await obtenerPerfilesPorUsuario(idUsuario);
       
       if (resultado.success) {
-        setPerfilesDisponibles(resultado.data.perfiles || []);
+        const perfiles = resultado.data.perfiles || [];
+        console.log('✅ Perfiles cargados:', perfiles.length);
+        setPerfilesDisponibles(perfiles);
+        
+        // Si había un perfil actual anterior, verificar que aún existe en los nuevos perfiles
+        if (perfilActualAnterior) {
+          const perfilExiste = perfiles.find(p => p.id === perfilActualAnterior.id);
+          if (perfilExiste) {
+            console.log('✅ Perfil actual preservado:', perfilActualAnterior.nombre);
+          } else {
+            console.log('⚠️ Perfil actual ya no existe, limpiando...');
+            setPerfilActual(null);
+            await AsyncStorage.removeItem('perfilActual');
+          }
+        }
       } else {
-        console.error('Error al cargar perfiles:', resultado.mensaje);
+        console.error('❌ Error al cargar perfiles:', resultado.mensaje);
         setPerfilesDisponibles([]);
       }
     } catch (error) {
-      console.error('Error al cargar perfiles:', error);
+      console.error('❌ Error al cargar perfiles:', error);
       setPerfilesDisponibles([]);
     } finally {
       setCargandoPerfiles(false);
     }
-  }, []);
+  }, [perfilActual]);
 
   // Función para cambiar de perfil
-  const cambiarPerfil = useCallback((nuevoPerfil) => {
+  const cambiarPerfil = useCallback(async (nuevoPerfil) => {
+    console.log('🔄 Cambiando perfil a:', nuevoPerfil.nombre);
     setPerfilActual(nuevoPerfil);
     setRequiereVerificacionPin(false);
     setTiempoUltimaActividad(Date.now());
+    
+    // Guardar perfil actual en AsyncStorage
+    try {
+      await AsyncStorage.setItem('perfilActual', JSON.stringify(nuevoPerfil));
+      console.log('💾 Perfil guardado en AsyncStorage:', nuevoPerfil.nombre);
+    } catch (error) {
+      console.error('Error al guardar perfil en AsyncStorage:', error);
+    }
+    
+    console.log('✅ Perfil cambiado y PIN verificación desactivada');
   }, []);
 
   // Función para actualizar actividad del usuario
@@ -118,7 +208,7 @@ export const UsuarioProvider = ({ children }) => {
   const verificarInactividad = useCallback(() => {
     if (perfilActual?.pin) {
       const tiempoInactivo = Date.now() - tiempoUltimaActividad;
-      const TIEMPO_LIMITE = 30 * 1000; // 30 SEGUNDOS para pruebas (cambiar a 30 * 60 * 1000 para producción)
+      const TIEMPO_LIMITE = 30 * 1000; // 30 SEGUNDOS para pruebas
       
       console.log('🔍 Verificando inactividad:', {
         tiempoInactivo: Math.round(tiempoInactivo / 1000) + 's',
@@ -143,30 +233,36 @@ export const UsuarioProvider = ({ children }) => {
   }, [perfilActual]);
 
   // Función para cerrar sesión
-const cerrarSesion = useCallback(async () => {
-  try {
-    console.log('🔴 Cerrando sesión desde contexto...');
-    
-    // Limpiar AsyncStorage primero
-    await limpiarSesion();
-    console.log('✅ AsyncStorage limpiado');
-    
-    // Luego limpiar todos los estados
-    setUsuario(null);
-    setPerfilActual(null);
-    setPerfilesDisponibles([]);
-    setSesionIniciada(false);
-    setRequiereVerificacionPin(false);
-    setTiempoUltimaActividad(Date.now());
-    
-    console.log('✅ Estados del contexto limpiados');
-    
-    return true;
-  } catch (error) {
-    console.error('❌ Error al cerrar sesión:', error);
-    return false;
-  }
-}, []);
+  const cerrarSesion = useCallback(async () => {
+    try {
+      console.log('🔴 Cerrando sesión desde contexto...');
+      
+      // Limpiar AsyncStorage primero
+      await limpiarSesion();
+      console.log('✅ AsyncStorage limpiado');
+      
+      // Limpiar todos los estados
+      setUsuario(null);
+      setPerfilActual(null);
+      setPerfilesDisponibles([]);
+      setSesionIniciada(false);
+      setRequiereVerificacionPin(false);
+      setTiempoUltimaActividad(Date.now());
+      setCargandoPerfiles(false);
+      
+      console.log('✅ Estados del contexto limpiados');
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Error al cerrar sesión:', error);
+      return false;
+    }
+  }, []);
+
+  // Cargar sesión al inicializar la app
+  useEffect(() => {
+    cargarSesion();
+  }, []);
 
   // Cargar perfiles cuando se establece un usuario
   useEffect(() => {

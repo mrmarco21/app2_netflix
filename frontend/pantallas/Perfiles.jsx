@@ -23,6 +23,7 @@ import {
 } from '../servicios/apiUsuarios';
 import ModalPinPerfil from '../componentes/ModalPinPerfil';
 import ModalAdministrarPerfiles from '../componentes/ModalAdministrarPerfiles';
+import { useUsuario } from '../contextos/UsuarioContext';
 
 export default function Perfiles({ navigation, route }) {
   const [perfiles, setPerfiles] = useState([]);
@@ -35,9 +36,16 @@ export default function Perfiles({ navigation, route }) {
   const [perfilConPin, setPerfilConPin] = useState(null);
   const [modalAdministrarVisible, setModalAdministrarVisible] = useState(false);
   
-  // Obtener el ID del usuario desde los parámetros de navegación o desde el login
-  const { usuario } = route.params || {};
-  const idUsuario = usuario?.id || 1; // Fallback temporal para pruebas
+  // Obtener cambiarPerfil del contexto
+  const { cambiarPerfil, usuario } = useUsuario();
+  
+  // Usar el usuario del contexto, no de los parámetros de navegación
+  const idUsuario = usuario?.id;
+  
+  console.log('👥 Perfiles.jsx - Usuario actual:', {
+    usuarioId: usuario?.id,
+    usuarioNombre: usuario?.nombres
+  });
 
   // Imágenes de perfil disponibles
   const imagenesPerfiles = [
@@ -62,14 +70,23 @@ export default function Perfiles({ navigation, route }) {
     return () => backHandler.remove();
   }, [navigation]);
 
-  // Cargar perfiles al montar el componente
+  // Cargar perfiles al montar el componente o cuando cambie el usuario
   useEffect(() => {
-    cargarPerfiles();
-  }, []);
+    if (usuario?.id) {
+      cargarPerfiles();
+    }
+  }, [usuario?.id]);
 
   const cargarPerfiles = async () => {
+    if (!idUsuario) {
+      console.log('⚠️ No hay usuario válido para cargar perfiles');
+      setCargando(false);
+      return;
+    }
+    
     try {
       setCargando(true);
+      console.log('🔄 Cargando perfiles para usuario:', idUsuario);
       const resultado = await obtenerPerfilesPorUsuario(idUsuario);
       
       if (resultado.success) {
@@ -83,6 +100,7 @@ export default function Perfiles({ navigation, route }) {
           }
         }
         
+        console.log('✅ Perfiles cargados para usuario', idUsuario, ':', perfilesData.length);
         setPerfiles(perfilesData);
       } else {
         Alert.alert('Error', resultado.mensaje);
@@ -183,26 +201,30 @@ export default function Perfiles({ navigation, route }) {
     setModalEdicion(true);
   };
 
-  const seleccionarPerfil = (perfil) => {
+  const seleccionarPerfil = async (perfil) => {
+    console.log('👤 Seleccionando perfil en Perfiles.jsx:', perfil.nombre, 'tiene PIN:', !!perfil.pin);
     // Verificar si el perfil tiene PIN
     if (perfil.pin) {
       setPerfilConPin(perfil);
       setModalPinVisible(true);
     } else {
-      // Navegar directamente si no tiene PIN
+      // Usar cambiarPerfil del contexto antes de navegar
+      await cambiarPerfil(perfil);
+      // Navegar sin pasar el perfil ya que está en el contexto
       navigation.navigate('InicioApp', { 
-        perfil: perfil,
         idUsuario: idUsuario 
       });
     }
   };
 
-  const manejarAccesoPermitido = (perfil) => {
+  const manejarAccesoPermitido = async (perfil) => {
+    console.log('🔓 Acceso permitido en Perfiles.jsx para:', perfil.nombre);
     setModalPinVisible(false);
     setPerfilConPin(null);
-    // Navegar a la pantalla principal de la app con los datos del perfil
+    // Usar cambiarPerfil del contexto antes de navegar
+    await cambiarPerfil(perfil);
+    // Navegar sin pasar el perfil ya que está en el contexto
     navigation.navigate('InicioApp', { 
-      perfil: perfil,
       idUsuario: idUsuario 
     });
   };
