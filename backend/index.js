@@ -117,6 +117,31 @@ async function verificarTablas() {
       // console.log('✅ Tabla calificaciones encontrada');
     }
     
+    // Verificar tabla historial
+    const [historial] = await connection.execute('SHOW TABLES LIKE "historial"');
+    if (historial.length === 0) {
+      console.log('⚠️ Tabla historial no encontrada, creándola...');
+      await connection.execute(`
+        CREATE TABLE historial (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          id_perfil INT NOT NULL,
+          id_contenido VARCHAR(50) NOT NULL,
+          titulo VARCHAR(255) NOT NULL,
+          imagen VARCHAR(500),
+          tipo ENUM('movie', 'tv') NOT NULL,
+          porcentaje_visto DECIMAL(5,2) DEFAULT 0,
+          tiempo_reproducido INT DEFAULT 0,
+          duracion_total INT DEFAULT 0,
+          fecha_visto TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (id_perfil) REFERENCES perfiles(id) ON DELETE CASCADE,
+          UNIQUE KEY unique_historial_perfil (id_perfil, id_contenido)
+        )
+      `);
+      console.log('✅ Tabla historial creada exitosamente');
+    } else {
+      // console.log('✅ Tabla historial encontrada');
+    }
+    
     connection.release();
     console.log('🗄️ Verificación de tablas completada');
     
