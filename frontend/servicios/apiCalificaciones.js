@@ -1,4 +1,4 @@
-const BASE_URL = 'http://192.168.137.1:3000';
+const BASE_URL = 'http://192.168.18.31:3000';
 
 // Obtener todas las calificaciones de un perfil
 export const obtenerCalificacionesPorPerfil = async (idPerfil) => {
