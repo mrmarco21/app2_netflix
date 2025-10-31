@@ -12,6 +12,7 @@ export default function Login({ navigation }) {
     const [contraseña, setContraseña] = useState('');
     const [mensaje, setMensaje] = useState('');
     const [cargando, setCargando] = useState(false);
+    const [mostrarContrasena, setMostrarContrasena] = useState(false);
     
     const { establecerUsuario } = useUsuario();
 
@@ -132,15 +133,25 @@ export default function Login({ navigation }) {
                                     autoCorrect={false}
                                 />
 
-                                <TextInput
-                                    style={estilos.input}
-                                    placeholder="Contraseña"
-                                    placeholderTextColor="#aaa"
-                                    secureTextEntry
-                                    value={contraseña}
-                                    onChangeText={setContraseña}
-                                    autoCapitalize="none"
-                                />
+                                <View style={estilos.inputWrapper}>
+                                    <TextInput
+                                        style={[estilos.input, estilos.inputConIcono]}
+                                        placeholder="Contraseña"
+                                        placeholderTextColor="#aaa"
+                                        secureTextEntry={!mostrarContrasena}
+                                        value={contraseña}
+                                        onChangeText={setContraseña}
+                                        autoCapitalize="none"
+                                    />
+                                    <TouchableOpacity
+                                        accessibilityRole="button"
+                                        accessibilityLabel={mostrarContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                        style={estilos.toggleIcon}
+                                        onPress={() => setMostrarContrasena(prev => !prev)}
+                                    >
+                                        <Ionicons name={mostrarContrasena ? 'eye-off' : 'eye'} size={22} color="#bbb" />
+                                    </TouchableOpacity>
+                                </View>
                                 {/* Muestra el mensaje de error o validación */}
                                 {mensaje !== '' && (
                                     <Text style={estilos.mensajeError}>
@@ -236,6 +247,23 @@ const estilos = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#74747497',
         borderRadius: 6,
+    },
+    inputWrapper: {
+        width: '100%',
+        marginBottom: 15,
+        position: 'relative',
+    },
+    inputConIcono: {
+        paddingRight: 44,
+        marginBottom: 0,
+    },
+    toggleIcon: {
+        position: 'absolute',
+        right: 12,
+        top: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     mensajeError: {
         color: "red",

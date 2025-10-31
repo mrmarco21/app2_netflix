@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, StatusBar, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Clock, Trash2 } from 'lucide-react-native';
 import { useHistorial } from '../contextos/HistorialContext';
@@ -9,6 +9,7 @@ export default function Historial({ navigation }) {
   const { historial, cargando, obtenerHistorial, eliminarDelHistorial, limpiarHistorial } = useHistorial();
   const { perfilActual } = useUsuario();
   const [eliminando, setEliminando] = useState(null);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
 
   // Cargar historial al montar el componente
   useEffect(() => {
@@ -45,22 +46,15 @@ export default function Historial({ navigation }) {
   };
 
   const handleLimpiarTodo = () => {
-    Alert.alert(
-      'Limpiar historial',
-      '¿Estás seguro de que quieres eliminar todo tu historial?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Limpiar todo',
-          style: 'destructive',
-          onPress: async () => {
-            if (perfilActual?.id) {
-              await limpiarHistorial(perfilActual.id);
-            }
-          },
-        },
-      ]
-    );
+    // En web, Alert.alert no soporta múltiples botones. Usamos un modal propio.
+    setMostrarConfirmacion(true);
+  };
+
+  const confirmarLimpiarTodo = async () => {
+    if (perfilActual?.id) {
+      await limpiarHistorial(perfilActual.id);
+    }
+    setMostrarConfirmacion(false);
   };
 
   const formatearFecha = (fecha) => {
@@ -194,6 +188,35 @@ export default function Historial({ navigation }) {
           </View>
         )}
       </ScrollView>
+
+      {/* Modal de confirmación para borrar todo el historial */}
+      <Modal
+        visible={mostrarConfirmacion}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMostrarConfirmacion(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Borrar todo el historial</Text>
+            <Text style={styles.modalMessage}>¿Quieres borrar todo el historial?</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancelar]}
+                onPress={() => setMostrarConfirmacion(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirmar]}
+                onPress={confirmarLimpiarTodo}
+              >
+                <Text style={styles.modalButtonText}>Sí</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -338,5 +361,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 10,
+  },
+  // Estilos del modal de confirmación
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#111',
+    borderRadius: 10,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    color: '#ccc',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  modalButtonCancelar: {
+    backgroundColor: '#333',
+  },
+  modalButtonConfirmar: {
+    backgroundColor: '#E50914',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
