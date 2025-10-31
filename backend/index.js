@@ -12,6 +12,7 @@ import tmdbRutas from "./src/rutas/tmdbRutas.js";
 import testRutas from "./src/rutas/testRutas.js";
 import rutasMiLista from "./src/rutas/rutasMiLista.js";
 import rutasCalificaciones from "./src/rutas/rutasCalificaciones.js";
+import rutasHistorial from "./src/rutas/rutasHistorial.js";
 
 const app = express();
 app.use(cors());
@@ -26,6 +27,7 @@ app.use("/api/tmdb", tmdbRutas);
 app.use("/api/test", testRutas);
 app.use("/mi-lista", rutasMiLista);
 app.use("/calificaciones", rutasCalificaciones);
+app.use("/historial", rutasHistorial);
 
 // Ruta de prueba
 app.get("/", (req, res) => {

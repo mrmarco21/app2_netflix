@@ -8,7 +8,11 @@ export default function SeccionHistorial({ historial = [], navigation, cargando 
   };
 
   const handlePressPelicula = (pelicula) => {
-    navigation.navigate('DetallePelicula', { peliculaId: pelicula.id });
+    if (pelicula.tipo === 'movie') {
+      navigation.navigate('DetallePelicula', { peliculaId: pelicula.id_contenido });
+    } else {
+      navigation.navigate('DetalleSerie', { serieId: pelicula.id_contenido });
+    }
   };
 
   if (cargando) {
@@ -56,13 +60,29 @@ export default function SeccionHistorial({ historial = [], navigation, cargando 
             style={styles.peliculaCard}
             onPress={() => handlePressPelicula(item)}
           >
-            <Image
-              source={{ uri: item.poster || item.imagen }}
-              style={styles.poster}
-              resizeMode="cover"
-            />
+            <View style={styles.posterContainer}>
+              <Image
+                source={{ uri: item.poster || item.imagen }}
+                style={styles.poster}
+                resizeMode="cover"
+              />
+              {/* Barra de progreso */}
+              <View style={styles.progresoContainer}>
+                <View style={styles.progresoBar}>
+                  <View 
+                    style={[
+                      styles.progresoFill, 
+                      { width: `${item.porcentaje_visto || 0}%` }
+                    ]} 
+                  />
+                </View>
+              </View>
+            </View>
             <Text style={styles.titulo_pelicula} numberOfLines={1}>
               {item.titulo}
+            </Text>
+            <Text style={styles.progreso_texto} numberOfLines={1}>
+              {item.porcentaje_visto || 0}% visto
             </Text>
           </TouchableOpacity>
         ))}
@@ -98,16 +118,44 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
     width: 120,
   },
+  posterContainer: {
+    position: 'relative',
+  },
   poster: {
     width: 120,
     height: 180,
     borderRadius: 8,
     backgroundColor: '#333',
   },
+  progresoContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 4,
+    paddingBottom: 4,
+  },
+  progresoBar: {
+    height: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progresoFill: {
+    height: '100%',
+    backgroundColor: '#E50914',
+    borderRadius: 2,
+  },
   titulo_pelicula: {
     color: '#fff',
     fontSize: 12,
     marginTop: 8,
+    textAlign: 'center',
+  },
+  progreso_texto: {
+    color: '#888',
+    fontSize: 10,
+    marginTop: 2,
     textAlign: 'center',
   },
   vacio: {

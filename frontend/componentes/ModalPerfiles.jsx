@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import ModalAdministrarPerfiles from './ModalAdministrarPerfiles';
 import ModalPinPerfil from './ModalPinPerfil';
-import { actualizarPinPerfil } from '../servicios/apiUsuarios';
+import { actualizarPinPerfil, actualizarPerfil, eliminarPerfil } from '../servicios/apiUsuarios';
 import { useUsuario } from '../contextos/UsuarioContext';
 
 export default function ModalPerfiles({
@@ -38,13 +38,52 @@ export default function ModalPerfiles({
 
   const manejarActualizarPin = async (perfilId, pin) => {
     try {
+      console.log('📱 ModalPerfiles: Actualizando PIN para perfil:', perfilId);
       await actualizarPinPerfil(perfilId, pin);
+      console.log('✅ ModalPerfiles: PIN actualizado exitosamente');
+      
       // Actualizar la lista de perfiles inmediatamente
       if (onActualizarPerfiles) {
+        console.log('🔄 ModalPerfiles: Actualizando lista de perfiles...');
         await onActualizarPerfiles();
+        console.log('✅ ModalPerfiles: Lista de perfiles actualizada');
       }
     } catch (error) {
-      console.error('Error al actualizar PIN:', error);
+      console.error('❌ ModalPerfiles: Error al actualizar PIN:', error);
+      throw error;
+    }
+  };
+
+  const manejarEditarPerfil = async (perfilId, nuevoNombre) => {
+    try {
+      const resultado = await actualizarPerfil(perfilId, nuevoNombre);
+      if (resultado.success) {
+        // Actualizar la lista de perfiles inmediatamente
+        if (onActualizarPerfiles) {
+          await onActualizarPerfiles();
+        }
+      } else {
+        throw new Error(resultado.mensaje);
+      }
+    } catch (error) {
+      console.error('Error al editar perfil:', error);
+      throw error;
+    }
+  };
+
+  const manejarEliminarPerfil = async (perfilId) => {
+    try {
+      const resultado = await eliminarPerfil(perfilId);
+      if (resultado.success) {
+        // Actualizar la lista de perfiles inmediatamente
+        if (onActualizarPerfiles) {
+          await onActualizarPerfiles();
+        }
+      } else {
+        throw new Error(resultado.mensaje);
+      }
+    } catch (error) {
+      console.error('Error al eliminar perfil:', error);
       throw error;
     }
   };
@@ -145,8 +184,8 @@ export default function ModalPerfiles({
         perfiles={perfiles}
         onCerrar={cerrarAdministrar}
         onActualizarPin={manejarActualizarPin}
-        onEditarPerfil={() => { }} // Función vacía por ahora
-        onEliminarPerfil={() => { }} // Función vacía por ahora
+        onEditarPerfil={manejarEditarPerfil}
+        onEliminarPerfil={manejarEliminarPerfil}
       />
 
       <ModalPinPerfil

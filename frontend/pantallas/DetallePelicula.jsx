@@ -24,6 +24,7 @@ import BotonesInteraccion from '../componentes/BotonesInteraccion';
 import PeliculasSimilares from '../componentes/PeliculasSimilares';
 import TemporadasSerie from '../componentes/TemporadasSerie';
 import ModalCalificacion from '../componentes/ModalCalificacion';
+import VideoPlayerSimulado from '../componentes/VideoPlayerSimulado';
 
 export default function DetallePelicula({ navigation, route }) {
   const { pelicula } = route.params || {};
@@ -33,7 +34,8 @@ export default function DetallePelicula({ navigation, route }) {
   const [esSerie, setEsSerie] = useState(false);
   const [modalCalificacionVisible, setModalCalificacionVisible] = useState(false);
   const [calificacionActual, setCalificacionActual] = useState(0);
-  const { toggleMiLista, estaEnMiLista } = useMiLista();
+  const [reproductorVisible, setReproductorVisible] = useState(false);
+  const { toggleMiLista, estaEnMiLista, miLista } = useMiLista();
   const { perfilActual } = useUsuario();
 
   // Detectar si es película o serie
@@ -272,7 +274,7 @@ export default function DetallePelicula({ navigation, route }) {
       // Cargar calificación actual del perfil
       cargarCalificacionActual();
     }
-  }, [peliculaData, estaEnMiLista, perfilActual]);
+  }, [peliculaData, estaEnMiLista, perfilActual, miLista]); // Agregar miLista como dependencia
 
   const cargarCalificacionActual = async () => {
     if (!perfilActual?.id || !peliculaData?.id) return;
@@ -308,8 +310,9 @@ export default function DetallePelicula({ navigation, route }) {
   };
 
   const handleVer = () => {
-    // Lógica para ver la película
+    // Mostrar el reproductor simulado
     console.log('Ver película:', peliculaData.titulo);
+    setReproductorVisible(true);
   };
 
   // Función para manejar la reproducción del video
@@ -334,7 +337,8 @@ export default function DetallePelicula({ navigation, route }) {
   const handleAgregarMiLista = async () => {
     const resultado = await toggleMiLista(peliculaData);
     if (resultado !== undefined) {
-      setEnMiLista(!enMiLista);
+      // No actualizar manualmente el estado, dejar que el useEffect lo haga
+      // basado en el contexto actualizado
     }
   };
 
@@ -442,6 +446,13 @@ export default function DetallePelicula({ navigation, route }) {
         contenido={peliculaData}
         calificacionActual={calificacionActual}
         onCalificacionGuardada={handleCalificacionGuardada}
+      />
+
+      {/* Reproductor simulado */}
+      <VideoPlayerSimulado
+        visible={reproductorVisible}
+        onClose={() => setReproductorVisible(false)}
+        titulo={peliculaData?.titulo || 'Video'}
       />
     </SafeAreaView>
   );

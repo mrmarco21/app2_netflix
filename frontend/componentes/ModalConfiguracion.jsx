@@ -12,6 +12,7 @@ export default function ModalConfiguracion({
   visible, 
   onCerrar, 
   onCerrarSesion, 
+  onAdministrarPerfiles,
   navigation 
 }) {
   const opcionesMenu = [
@@ -19,10 +20,7 @@ export default function ModalConfiguracion({
       id: 'administrar-perfiles',
       icono: 'create-outline',
       titulo: 'Administrar perfiles',
-      onPress: () => {
-        onCerrar();
-        // Aquí iría la navegación a administrar perfiles
-      }
+      onPress: onAdministrarPerfiles
     },
     {
       id: 'configuracion-app',

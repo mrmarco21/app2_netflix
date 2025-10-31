@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, StatusBar, ScrollView, BackHandler } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMiLista } from '../contextos/MiListaContext';
 import { useUsuario } from '../contextos/UsuarioContext';
+import { useHistorial } from '../contextos/HistorialContext';
 import HeaderMiNetflix from '../componentes/HeaderMiNetflix';
 import PerfilActual from '../componentes/PerfilActual';
 import ModalPerfiles from '../componentes/ModalPerfiles';
@@ -18,17 +19,17 @@ import SeccionMasFunciones from '../componentes/SeccionMasFunciones';
 import ModalCompartir from '../componentes/ModalCompartir';
 
 export default function MiNetflix({ navigation }) {
+// Estados para modales
   const [modalPerfilesVisible, setModalPerfilesVisible] = useState(false);
-  // const [modalConfigVisible, setModalConfigVisible] = useState(false);
+  const [modalConfigVisible, setModalConfigVisible] = useState(false);
   const [modalPinVisible, setModalPinVisible] = useState(false);
   const [perfilConPin, setPerfilConPin] = useState(null);
-  const [historial, setHistorial] = useState([]);	
-  const [cargandoHistorial, setCargandoHistorial] = useState(false)
   const [paraAdultos, setParaAdultos] = useState(false);
   const [modalCompartirVisible, setModalCompartirVisible] = useState(false);
 
   const { miLista, quitarDeMiLista, cargando } = useMiLista();
   const { perfilActual, perfilesDisponibles, cambiarPerfil, cargarPerfilesDisponibles, cerrarSesion, usuario } = useUsuario();
+  const { historial, cargando: cargandoHistorial, obtenerHistorial } = useHistorial();
 
   // Log para debugging del estado del perfil
   console.log('🏠 MiNetflix renderizado - Estado actual:', {
@@ -55,40 +56,10 @@ export default function MiNetflix({ navigation }) {
 
 
   useEffect(() => {
-    const cargarHistorial = async () => {
-      if (!perfilActual) return;
-      
-      setCargandoHistorial(true);
-      try {
-        const historialEjemplo = [
-          {
-            id: 1,
-            titulo: 'El Amateur',
-            poster: 'https://image.tmdb.org/t/p/w500/example1.jpg',
-          },
-          {
-            id: 2,
-            titulo: 'La llave de Sarah',
-            poster: 'https://image.tmdb.org/t/p/w500/example2.jpg',
-          },
-          {
-            id: 3,
-            titulo: 'Matabot T1',
-            poster: 'https://image.tmdb.org/t/p/w500/example3.jpg',
-          },
-        ];
-        
-        setHistorial(historialEjemplo);
-      } catch (error) {
-        console.error('Error al cargar historial:', error);
-        setHistorial([]);
-      } finally {
-        setCargandoHistorial(false);
-      }
-    };
-
-    cargarHistorial();
-  }, [perfilActual]);
+    if (perfilActual?.id) {
+      obtenerHistorial(perfilActual.id);
+    }
+  }, [perfilActual?.id]);
   // Imágenes de perfil disponibles
   const imagenesPerfiles = [
     require('../assets/perfil1.jpg'),
@@ -187,6 +158,7 @@ const handleCerrarSesion = async () => {
           avatar: obtenerImagenPerfil(perfilActual.id)
         }}
         onPerfilPress={() => setModalPerfilesVisible(true)}
+        navigation={navigation}
       />
 
       <BotonesAcciones 
@@ -212,7 +184,8 @@ const handleCerrarSesion = async () => {
         paraAdultos={paraAdultos}
         onToggleParaAdultos={handleToggleParaAdultos}
         onCerrarSesion={handleCerrarSesion}
-        
+        onGestionPress={() => setModalPerfilesVisible(true)}
+        onConfiguracionPress={() => setModalConfigVisible(true)}
       />
       <ModalCompartir
         visible={modalCompartirVisible}
@@ -237,12 +210,16 @@ const handleCerrarSesion = async () => {
         onActualizarPerfiles={() => cargarPerfilesDisponibles(usuario?.id)}
       />
       
-      {/* <ModalConfiguracion
+      <ModalConfiguracion
         visible={modalConfigVisible}
         onCerrar={() => setModalConfigVisible(false)}
         onCerrarSesion={handleCerrarSesion}
+        onAdministrarPerfiles={() => {
+          setModalConfigVisible(false);
+          setModalPerfilesVisible(true);
+        }}
         navigation={navigation}
-      /> */}
+      />
 
       <ModalPinPerfil
         visible={modalPinVisible}

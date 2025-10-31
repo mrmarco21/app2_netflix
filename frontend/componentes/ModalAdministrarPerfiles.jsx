@@ -46,11 +46,22 @@ export default function ModalAdministrarPerfiles({
     }
 
     try {
+      console.log('🔐 Guardando PIN para perfil:', perfilSeleccionado?.id);
       await onActualizarPin(perfilSeleccionado.id, pin);
-      Alert.alert('Éxito', 'PIN configurado exitosamente');
+      
+      // Limpiar estado antes de mostrar el alert
+      setPin('');
+      setConfirmarPin('');
       setModalPin(false);
       setPerfilSeleccionado(null);
+      
+      // Mostrar alert después de limpiar el estado
+      setTimeout(() => {
+        Alert.alert('Éxito', 'PIN configurado exitosamente');
+      }, 100);
+      
     } catch (error) {
+      console.error('❌ Error al guardar PIN:', error);
       Alert.alert('Error', 'No se pudo configurar el PIN');
     }
   };
@@ -66,11 +77,20 @@ export default function ModalAdministrarPerfiles({
           style: 'destructive',
           onPress: async () => {
             try {
+              console.log('🗑️ Eliminando PIN para perfil:', perfilSeleccionado?.id);
               await onActualizarPin(perfilSeleccionado.id, null);
-              Alert.alert('Éxito', 'PIN eliminado exitosamente');
+              
+              // Limpiar estado antes de mostrar el alert
               setModalPin(false);
               setPerfilSeleccionado(null);
+              
+              // Mostrar alert después de limpiar el estado
+              setTimeout(() => {
+                Alert.alert('Éxito', 'PIN eliminado exitosamente');
+              }, 100);
+              
             } catch (error) {
+              console.error('❌ Error al eliminar PIN:', error);
               Alert.alert('Error', 'No se pudo eliminar el PIN');
             }
           }
@@ -97,11 +117,21 @@ export default function ModalAdministrarPerfiles({
     }
 
     try {
+      console.log('✏️ Guardando nombre para perfil:', perfilSeleccionado?.id, 'nuevo nombre:', nuevoNombre.trim());
       await onEditarPerfil(perfilSeleccionado.id, nuevoNombre.trim());
-      Alert.alert('Éxito', 'Nombre actualizado exitosamente');
+      
+      // Limpiar estado antes de mostrar el alert
       setEditandoNombre(false);
       setPerfilSeleccionado(null);
+      setNuevoNombre('');
+      
+      // Mostrar alert después de limpiar el estado
+      setTimeout(() => {
+        Alert.alert('Éxito', 'Nombre actualizado exitosamente');
+      }, 100);
+      
     } catch (error) {
+      console.error('❌ Error al guardar nombre:', error);
       Alert.alert('Error', 'No se pudo actualizar el nombre');
     }
   };

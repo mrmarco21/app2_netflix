@@ -1,4 +1,8 @@
-const BASE_URL = 'http://192.168.137.1:3000';
+// Importar configuración automática que detecta PC vs móvil
+import { API_BASE_URL } from './config.js';
+
+// Renombrar para consistencia con otros archivos
+const BASE_URL = API_BASE_URL;
 
 // Obtener Mi Lista de un perfil
 export const obtenerMiLista = async (idPerfil) => {

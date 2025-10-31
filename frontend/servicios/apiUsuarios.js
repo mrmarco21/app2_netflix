@@ -1,5 +1,5 @@
-// URL base de la API
-const API_BASE_URL = "http://192.168.137.1:3000";
+// Importar configuración automática que detecta PC vs móvil
+import { API_BASE_URL } from './config.js';
 
 // Función para registrar un nuevo usuario
 export const registrarUsuario = async (nombres, correo, contrasena) => {
@@ -161,6 +161,10 @@ export const obtenerUsuarios = async () => {
 // Función para crear un nuevo perfil
 export const crearPerfil = async (nombre, id_usuario) => {
   try {
+    // Crear un timeout para evitar que se cuelgue en móvil
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+
     const response = await fetch(`${API_BASE_URL}/perfiles`, {
       method: "POST",
       headers: {
@@ -170,8 +174,10 @@ export const crearPerfil = async (nombre, id_usuario) => {
         nombre,
         id_usuario,
       }),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
     const data = await response.json();
 
     if (!response.ok) {
@@ -184,6 +190,12 @@ export const crearPerfil = async (nombre, id_usuario) => {
       mensaje: data.mensaje || "Perfil creado exitosamente",
     };
   } catch (error) {
+    if (error.name === 'AbortError') {
+      return {
+        success: false,
+        mensaje: "Tiempo de espera agotado. Verifica tu conexión a internet.",
+      };
+    }
     return {
       success: false,
       mensaje: error.message || "Error de conexión",

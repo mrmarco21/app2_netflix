@@ -139,31 +139,12 @@ export const UsuarioProvider = ({ children }) => {
       setCargandoPerfiles(true);
       console.log('🔄 Cargando perfiles para usuario:', idUsuario);
       
-      // Guardar el perfil actual antes de limpiar (si existe)
-      const perfilActualAnterior = perfilActual;
-      console.log('💾 Perfil actual antes de cargar:', perfilActualAnterior?.nombre || 'ninguno');
-      
-      // Limpiar perfiles anteriores antes de cargar nuevos
-      setPerfilesDisponibles([]);
-      
       const resultado = await obtenerPerfilesPorUsuario(idUsuario);
       
       if (resultado.success) {
         const perfiles = resultado.data.perfiles || [];
         console.log('✅ Perfiles cargados:', perfiles.length);
         setPerfilesDisponibles(perfiles);
-        
-        // Si había un perfil actual anterior, verificar que aún existe en los nuevos perfiles
-        if (perfilActualAnterior) {
-          const perfilExiste = perfiles.find(p => p.id === perfilActualAnterior.id);
-          if (perfilExiste) {
-            console.log('✅ Perfil actual preservado:', perfilActualAnterior.nombre);
-          } else {
-            console.log('⚠️ Perfil actual ya no existe, limpiando...');
-            setPerfilActual(null);
-            await AsyncStorage.removeItem('perfilActual');
-          }
-        }
       } else {
         console.error('❌ Error al cargar perfiles:', resultado.mensaje);
         setPerfilesDisponibles([]);
@@ -174,7 +155,7 @@ export const UsuarioProvider = ({ children }) => {
     } finally {
       setCargandoPerfiles(false);
     }
-  }, [perfilActual]);
+  }, []); // Removemos perfilActual de las dependencias para evitar el loop
 
   // Función para cambiar de perfil
   const cambiarPerfil = useCallback(async (nuevoPerfil) => {
