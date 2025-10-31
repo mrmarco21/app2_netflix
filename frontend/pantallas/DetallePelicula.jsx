@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMiLista } from '../contextos/MiListaContext';
 import { useUsuario } from '../contextos/UsuarioContext';
+import { useHistorial } from '../contextos/HistorialContext';
 import { obtenerDetallePelicula, obtenerDetalleSerie, obtenerSerieCompleta } from '../servicios/tmdbService';
 import * as apiCalificaciones from '../servicios/apiCalificaciones';
 
@@ -25,6 +26,7 @@ import PeliculasSimilares from '../componentes/PeliculasSimilares';
 import TemporadasSerie from '../componentes/TemporadasSerie';
 import ModalCalificacion from '../componentes/ModalCalificacion';
 import VideoPlayerSimulado from '../componentes/VideoPlayerSimulado';
+import { useDescargas } from '../contextos/DescargasContext';
 
 export default function DetallePelicula({ navigation, route }) {
   const { pelicula } = route.params || {};
@@ -35,8 +37,11 @@ export default function DetallePelicula({ navigation, route }) {
   const [modalCalificacionVisible, setModalCalificacionVisible] = useState(false);
   const [calificacionActual, setCalificacionActual] = useState(0);
   const [reproductorVisible, setReproductorVisible] = useState(false);
+  const { agregarAlHistorial } = useHistorial();
+  const registroHistorialIdRef = useRef(null);
   const { toggleMiLista, estaEnMiLista, miLista } = useMiLista();
   const { perfilActual } = useUsuario();
+  const { iniciarDescarga } = useDescargas();
 
   // Detectar si es película o serie
   useEffect(() => {
@@ -276,6 +281,26 @@ export default function DetallePelicula({ navigation, route }) {
     }
   }, [peliculaData, estaEnMiLista, perfilActual, miLista]); // Agregar miLista como dependencia
 
+  // Agregar al historial cuando se abre la pantalla de detalle
+  useEffect(() => {
+    if (!peliculaData?.id || !perfilActual?.id) return;
+
+    // Evitar registrar múltiples veces el mismo contenido
+    if (registroHistorialIdRef.current === peliculaData.id) return;
+
+    const tipoHistorial = esSerie ? 'tv' : 'movie';
+
+    agregarAlHistorial({
+      idPerfil: perfilActual.id,
+      idContenido: peliculaData.id,
+      titulo: peliculaData.titulo,
+      imagen: peliculaData.imagen,
+      tipo: tipoHistorial,
+    });
+
+    registroHistorialIdRef.current = peliculaData.id;
+  }, [peliculaData?.id, perfilActual?.id, esSerie]);
+
   const cargarCalificacionActual = async () => {
     if (!perfilActual?.id || !peliculaData?.id) return;
     
@@ -296,8 +321,13 @@ export default function DetallePelicula({ navigation, route }) {
   };
 
   const handleDownload = () => {
-    // Lógica para descargar
-    console.log('Descargando película:', peliculaData.titulo);
+    if (!peliculaData) return;
+    iniciarDescarga({
+      id: peliculaData.id,
+      titulo: peliculaData.titulo,
+      imagen: peliculaData.imagen || peliculaData.poster_small || peliculaData.poster_url,
+    });
+    console.log('📥 Descarga iniciada:', peliculaData.titulo);
   };
 
   const handleSearch = () => {
