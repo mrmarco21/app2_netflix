@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,11 +14,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import NavegacionInferior from '../componentes/NavegacionInferior';
+import { useDescargas } from '../contextos/DescargasContext';
 
 export default function Descargas({ navigation }) {
-  const [descargas, setDescargas] = useState([]);
-  const [espacioDisponible, setEspacioDisponible] = useState('2.1 GB');
-  const [configuracionDescargas, setConfiguracionDescargas] = useState({
+  const { descargas, iniciarDescarga, eliminarDescarga, pausarReanudarDescarga } = useDescargas();
+  const [espacioDisponible, setEspacioDisponible] = React.useState('2.1 GB');
+  const [configuracionDescargas, setConfiguracionDescargas] = React.useState({
     calidadVideo: 'Estándar',
     soloWiFi: true,
     descargasInteligentes: true,
@@ -39,53 +40,7 @@ export default function Descargas({ navigation }) {
     return () => backHandler.remove(); // Limpia el listener al desmontar
   }, [navigation]);
 
-  // Datos de ejemplo para descargas
-  const ejemploDescargas = [
-    {
-      id: 1,
-      titulo: 'Stranger Things',
-      temporada: 'T4: E1-8',
-      imagen: 'https://via.placeholder.com/150x200/8B0000/FFFFFF?text=STRANGER+THINGS',
-      tamano: '1.2 GB',
-      progreso: 100,
-      fechaDescarga: '2024-01-15',
-      tiempoRestante: null,
-      estado: 'completada',
-    },
-    {
-      id: 2,
-      titulo: 'The Witcher',
-      temporada: 'T3: E1-3',
-      imagen: 'https://via.placeholder.com/150x200/4B0082/FFFFFF?text=THE+WITCHER',
-      tamano: '800 MB',
-      progreso: 65,
-      fechaDescarga: '2024-01-16',
-      tiempoRestante: '15 min',
-      estado: 'descargando',
-    },
-    {
-      id: 3,
-      titulo: 'Casa de Papel',
-      temporada: 'T5: E1-10',
-      imagen: 'https://via.placeholder.com/150x200/FF6347/FFFFFF?text=CASA+PAPEL',
-      tamano: '2.1 GB',
-      progreso: 100,
-      fechaDescarga: '2024-01-10',
-      tiempoRestante: null,
-      estado: 'completada',
-    },
-    {
-      id: 4,
-      titulo: 'Dark',
-      temporada: 'T1: E1-5',
-      imagen: 'https://via.placeholder.com/150x200/2F4F4F/FFFFFF?text=DARK',
-      tamano: '950 MB',
-      progreso: 30,
-      fechaDescarga: '2024-01-16',
-      tiempoRestante: '45 min',
-      estado: 'descargando',
-    },
-  ];
+  // Si deseas arrancar con descargas de ejemplo, puedes invocar iniciarDescarga desde aquí.
 
   // Contenido recomendado para descargar
   const contenidoRecomendado = [
@@ -106,46 +61,18 @@ export default function Descargas({ navigation }) {
   ];
 
   useEffect(() => {
-    setDescargas(ejemploDescargas);
+    // No prellenamos; las descargas aparecerán cuando el usuario las inicie.
   }, []);
 
-  const eliminarDescarga = (id) => {
-    Alert.alert(
-      'Eliminar descarga',
-      '¿Estás seguro de que quieres eliminar esta descarga?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => {
-            setDescargas(descargas.filter(item => item.id !== id));
-          },
-        },
-      ]
-    );
+  // Eliminar directamente al pulsar el icono de basura
+  const eliminarDirecto = (id) => eliminarDescarga(id);
+
+  const pausarReanudar = (id) => {
+    pausarReanudarDescarga(id);
   };
 
-  const pausarReanudarDescarga = (id) => {
-    setDescargas(descargas.map(item => {
-      if (item.id === id && item.estado === 'descargando') {
-        return { ...item, estado: 'pausada' };
-      } else if (item.id === id && item.estado === 'pausada') {
-        return { ...item, estado: 'descargando' };
-      }
-      return item;
-    }));
-  };
-
-  const iniciarDescarga = (contenido) => {
-    const nuevaDescarga = {
-      ...contenido,
-      progreso: 0,
-      fechaDescarga: new Date().toISOString().split('T')[0],
-      tiempoRestante: 'Calculando...',
-      estado: 'descargando',
-    };
-    setDescargas([...descargas, nuevaDescarga]);
+  const iniciarDescargaDesdeRecomendado = (contenido) => {
+    iniciarDescarga(contenido);
   };
 
   const renderDescargaItem = ({ item }) => (
@@ -184,7 +111,7 @@ export default function Descargas({ navigation }) {
         ) : (
           <TouchableOpacity 
             style={styles.botonPausar}
-            onPress={() => pausarReanudarDescarga(item.id)}
+            onPress={() => pausarReanudar(item.id)}
           >
             <Ionicons 
               name={item.estado === 'descargando' ? "pause" : "play"} 
@@ -196,7 +123,7 @@ export default function Descargas({ navigation }) {
         
         <TouchableOpacity 
           style={styles.botonEliminar}
-          onPress={() => eliminarDescarga(item.id)}
+          onPress={() => eliminarDirecto(item.id)}
         >
           <Ionicons name="trash-outline" size={20} color="#E50914" />
         </TouchableOpacity>
@@ -214,7 +141,7 @@ export default function Descargas({ navigation }) {
       </View>
       <TouchableOpacity 
         style={styles.botonDescargar}
-        onPress={() => iniciarDescarga(item)}
+        onPress={() => iniciarDescargaDesdeRecomendado(item)}
       >
         <Ionicons name="download-outline" size={24} color="white" />
       </TouchableOpacity>
