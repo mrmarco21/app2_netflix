@@ -1,18 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { User, Shield, HelpCircle, Tv, Settings, ChevronRight, LogOut } from 'lucide-react-native';
-export default function SeccionMasFunciones({ navigation, paraAdultos, onToggleParaAdultos, onCerrarSesion }) {
+
+export default function SeccionMasFunciones({ navigation, paraAdultos, onToggleParaAdultos, onCerrarSesion, onGestionPress, onConfiguracionPress }) {
   
   const opciones = [
     {
       id: 'gestion',
       titulo: 'Gestión',
       icono: User,
-      onPress: () => {
-        // Aquí puedes navegar a la pantalla de gestión
-        console.log('Navegar a Gestión');
-        // navigation.navigate('Gestion');
-      }
+      onPress: onGestionPress
     },
     {
       id: 'adultos',
@@ -26,7 +23,7 @@ export default function SeccionMasFunciones({ navigation, paraAdultos, onToggleP
       icono: HelpCircle,
       onPress: () => {
         console.log('Navegar a Ayuda');
-        // navigation.navigate('Ayuda');
+        // navigation.navigate('Ayuda'); // Para implementar después
       }
     },
     {
@@ -35,28 +32,25 @@ export default function SeccionMasFunciones({ navigation, paraAdultos, onToggleP
       icono: Tv,
       onPress: () => {
         console.log('Navegar a Audio y Subtítulos');
-        // navigation.navigate('AudioSubtitulos');
+        // navigation.navigate('AudioSubtitulos'); // Para implementar después
       }
     },
     {
       id: 'configuraciones',
       titulo: 'Configuraciones',
       icono: Settings,
-      onPress: () => {
-        console.log('Navegar a Configuraciones');
-        // navigation.navigate('Configuraciones');
-      }
+      onPress: onConfiguracionPress
     },
     {
-    id: 'cerrar-sesion',
-    titulo: 'Cerrar sesión',
-    icono: LogOut,
-    onPress: () => {
+      id: 'cerrar-sesion',
+      titulo: 'Cerrar sesión',
+      icono: LogOut,
+      onPress: () => {
         if (onCerrarSesion) {
-        onCerrarSesion();
+          onCerrarSesion();
         }
-    },
-    esDestructivo: true, // Para darle un color rojo
+      },
+      esDestructivo: true,
     },
   ];
 
@@ -80,11 +74,11 @@ export default function SeccionMasFunciones({ navigation, paraAdultos, onToggleP
                 <View style={styles.iconoTextoContainer}>
                   <IconoComponente color="#fff" size={24} />
                   <Text style={[
-                        styles.opcionTexto, 
-                        opcion.esDestructivo && styles.textoDestructivo
-                        ]}>
-                        {opcion.titulo}
-                    </Text>
+                    styles.opcionTexto, 
+                    opcion.esDestructivo && styles.textoDestructivo
+                  ]}>
+                    {opcion.titulo}
+                  </Text>
                 </View>
                 
                 {opcion.tieneSwitch ? (
@@ -94,9 +88,11 @@ export default function SeccionMasFunciones({ navigation, paraAdultos, onToggleP
                     trackColor={{ false: '#767577', true: '#4ECDC4' }}
                     thumbColor={paraAdultos ? '#fff' : '#f4f3f4'}
                   />
-                  
                 ) : (
-                  <ChevronRight color="#fff" size={24} />
+                  <ChevronRight 
+                    color={opcion.esDestructivo ? '#E50914' : '#fff'} 
+                    size={24} 
+                  />
                 )}
               </View>
             </TouchableOpacity>
@@ -147,6 +143,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   textoDestructivo: {
-  color: '#E50914',
-},
+    color: '#E50914',
+  },
 });

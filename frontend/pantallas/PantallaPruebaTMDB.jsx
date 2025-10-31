@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, Image, StyleSheet, ActivityIndicator } from "react-native";
+import { API_BASE_URL } from "../servicios/config.js";
 
 export default function PantallaPruebaTMDB() {
     const [peliculas, setPeliculas] = useState([]);
@@ -8,11 +9,7 @@ export default function PantallaPruebaTMDB() {
     useEffect(() => {
         const obtenerPeliculas = async () => {
             try {
-<<<<<<< HEAD
-                const respuesta = await fetch("http://192.168.56.1:3000/api/tmdb/peliculas/populares");
-=======
-                const respuesta = await fetch("http://192.168.18.31:3000/api/tmdb/peliculas/populares");
->>>>>>> a7b27af115a1d50ac62be861c8a6938b90b6a295
+                const respuesta = await fetch(`${API_BASE_URL}/api/tmdb/peliculas/populares`);
                 const data = await respuesta.json();
 
                 console.log("📦 Datos recibidos:", data); // 🔍 Debug

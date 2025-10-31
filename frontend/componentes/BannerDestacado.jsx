@@ -4,13 +4,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMiLista } from '../contextos/MiListaContext';
 import { useNavigation } from '@react-navigation/native';
 
-export default function BannerDestacado({ contenidoDestacado, onAgregarAMiLista }) {
+export default function BannerDestacado({ contenidoDestacado, onAgregarAMiLista, onReproducir }) {
   const { estaEnMiLista } = useMiLista();
   const navigation = useNavigation();
   
   const handleMiLista = () => {
     if (onAgregarAMiLista && contenidoDestacado) {
       onAgregarAMiLista(contenidoDestacado);
+    }
+  };
+
+  const handleReproducir = () => {
+    if (onReproducir && contenidoDestacado) {
+      onReproducir(contenidoDestacado);
     }
   };
 
@@ -41,7 +47,7 @@ export default function BannerDestacado({ contenidoDestacado, onAgregarAMiLista 
       ellipsizeMode="tail">{contenidoDestacado.descripcion}</Text>
         )}
         <View style={styles.bannerButtons}>
-          <TouchableOpacity style={styles.playButton}>
+          <TouchableOpacity style={styles.playButton} onPress={handleReproducir}>
             <Ionicons name="play" size={20} color="black" />
             <Text style={styles.playButtonText}>Reproducir</Text>
           </TouchableOpacity>

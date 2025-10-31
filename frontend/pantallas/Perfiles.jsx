@@ -70,12 +70,17 @@ export default function Perfiles({ navigation, route }) {
     return () => backHandler.remove();
   }, [navigation]);
 
+  // Cargar perfiles al montar el componente
+  useEffect(() => {
+    cargarPerfiles();
+  }, []);
+
   // Cargar perfiles al montar el componente o cuando cambie el usuario
   useEffect(() => {
     if (usuario?.id) {
       cargarPerfiles();
     }
-  }, [usuario?.id]);
+  }, [usuario?.id]); // Solo depende del ID del usuario
 
   const cargarPerfiles = async () => {
     if (!idUsuario) {

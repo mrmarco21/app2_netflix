@@ -1,36 +1,66 @@
-import React from 'react';
-import { View, Text, StyleSheet, StatusBar, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, StatusBar, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Clock } from 'lucide-react-native';
+import { ArrowLeft, Clock, Trash2 } from 'lucide-react-native';
+import { useHistorial } from '../contextos/HistorialContext';
+import { useUsuario } from '../contextos/UsuarioContext';
 
 export default function Historial({ navigation }) {
-  // TODO: Conectar con tu contexto de historial cuando lo crees
-  const historialEjemplo = [
-    {
-      id: 1,
-      titulo: 'El Amateur',
-      poster: 'https://image.tmdb.org/t/p/w500/example1.jpg',
-      fechaVista: '2025-01-15',
-      porcentajeVisto: 100,
-    },
-    {
-      id: 2,
-      titulo: 'La llave de Sarah',
-      poster: 'https://image.tmdb.org/t/p/w500/example2.jpg',
-      fechaVista: '2025-01-14',
-      porcentajeVisto: 75,
-    },
-    {
-      id: 3,
-      titulo: 'Matabot T1',
-      poster: 'https://image.tmdb.org/t/p/w500/example3.jpg',
-      fechaVista: '2025-01-13',
-      porcentajeVisto: 45,
-    },
-  ];
+  const { historial, cargando, obtenerHistorial, eliminarDelHistorial, limpiarHistorial } = useHistorial();
+  const { perfilActual } = useUsuario();
+  const [eliminando, setEliminando] = useState(null);
 
-  const handleVerDetalle = (pelicula) => {
-    navigation.navigate('DetallePelicula', { peliculaId: pelicula.id });
+  // Cargar historial al montar el componente
+  useEffect(() => {
+    if (perfilActual?.id) {
+      obtenerHistorial(perfilActual.id);
+    }
+  }, [perfilActual?.id]);
+
+  const handleVerDetalle = (contenido) => {
+    if (contenido.tipo === 'movie') {
+      navigation.navigate('DetallePelicula', { peliculaId: contenido.id_contenido });
+    } else {
+      navigation.navigate('DetalleSerie', { serieId: contenido.id_contenido });
+    }
+  };
+
+  const handleEliminar = async (id) => {
+    Alert.alert(
+      'Eliminar del historial',
+      '¿Estás seguro de que quieres eliminar este elemento?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            setEliminando(id);
+            await eliminarDelHistorial(id, perfilActual?.id);
+            setEliminando(null);
+          },
+        },
+      ]
+    );
+  };
+
+  const handleLimpiarTodo = () => {
+    Alert.alert(
+      'Limpiar historial',
+      '¿Estás seguro de que quieres eliminar todo tu historial?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Limpiar todo',
+          style: 'destructive',
+          onPress: async () => {
+            if (perfilActual?.id) {
+              await limpiarHistorial(perfilActual.id);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const formatearFecha = (fecha) => {
@@ -48,6 +78,18 @@ export default function Historial({ navigation }) {
     }
   };
 
+  if (cargando) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#E50914" />
+          <Text style={styles.loadingText}>Cargando historial...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -61,45 +103,62 @@ export default function Historial({ navigation }) {
           <ArrowLeft color="#fff" size={28} />
         </TouchableOpacity>
         <Text style={styles.titulo}>Historial</Text>
-        <View style={styles.placeholder} />
+        {historial.length > 0 && (
+          <TouchableOpacity onPress={handleLimpiarTodo}>
+            <Trash2 color="#E50914" size={24} />
+          </TouchableOpacity>
+        )}
+        {historial.length === 0 && <View style={styles.placeholder} />}
       </View>
 
       <ScrollView style={styles.scrollContainer}>
-        {historialEjemplo.length === 0 ? (
+        {historial.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Clock color="#888" size={64} />
-            <Text style={styles.emptyTexto}>No has visto películas aún</Text>
+            <Text style={styles.emptyTexto}>No has visto películas o series aún</Text>
             <Text style={styles.emptySubtexto}>
-              Tu historial aparecerá aquí
+              Tu historial aparecerá aquí cuando empieces a ver contenido
             </Text>
           </View>
         ) : (
           <View style={styles.listaContainer}>
             <Text style={styles.cantidadTexto}>
-              {historialEjemplo.length} {historialEjemplo.length === 1 ? 'película' : 'películas'} en tu historial
+              {historial.length} {historial.length === 1 ? 'elemento' : 'elementos'} en tu historial
             </Text>
             
-            {historialEjemplo.map((pelicula) => (
+            {historial.map((contenido) => (
               <TouchableOpacity
-                key={pelicula.id}
-                style={styles.peliculaItem}
-                onPress={() => handleVerDetalle(pelicula)}
+                key={contenido.id}
+                style={[
+                  styles.contenidoItem,
+                  eliminando === contenido.id && styles.contenidoItemEliminando
+                ]}
+                onPress={() => handleVerDetalle(contenido)}
+                onLongPress={() => handleEliminar(contenido.id)}
+                disabled={eliminando === contenido.id}
               >
                 <Image
-                  source={{ uri: pelicula.poster }}
+                  source={{ 
+                    uri: contenido.imagen || 'https://via.placeholder.com/80x120?text=Sin+Imagen'
+                  }}
                   style={styles.poster}
                   resizeMode="cover"
                 />
                 
                 <View style={styles.infoContainer}>
-                  <Text style={styles.tituloPelicula} numberOfLines={2}>
-                    {pelicula.titulo}
+                  <Text style={styles.tituloContenido} numberOfLines={2}>
+                    {contenido.titulo}
                   </Text>
                   
                   <View style={styles.metaInfo}>
+                    <View style={styles.tipoContainer}>
+                      <Text style={styles.tipoTexto}>
+                        {contenido.tipo === 'movie' ? 'Película' : 'Serie'}
+                      </Text>
+                    </View>
                     <Clock color="#888" size={14} />
                     <Text style={styles.fechaTexto}>
-                      {formatearFecha(pelicula.fechaVista)}
+                      {formatearFecha(contenido.fecha_visto)}
                     </Text>
                   </View>
 
@@ -109,15 +168,27 @@ export default function Historial({ navigation }) {
                       <View 
                         style={[
                           styles.progresoFill, 
-                          { width: `${pelicula.porcentajeVisto}%` }
+                          { width: `${contenido.porcentaje_visto}%` }
                         ]} 
                       />
                     </View>
                     <Text style={styles.progresoTexto}>
-                      {pelicula.porcentajeVisto}%
+                      {contenido.porcentaje_visto}%
                     </Text>
                   </View>
                 </View>
+
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleEliminar(contenido.id)}
+                  disabled={eliminando === contenido.id}
+                >
+                  {eliminando === contenido.id ? (
+                    <ActivityIndicator size="small" color="#E50914" />
+                  ) : (
+                    <Trash2 color="#666" size={20} />
+                  )}
+                </TouchableOpacity>
               </TouchableOpacity>
             ))}
           </View>
@@ -131,6 +202,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 16,
+    marginTop: 10,
   },
   header: {
     flexDirection: 'row',
@@ -182,12 +263,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 15,
   },
-  peliculaItem: {
+  contenidoItem: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 8,
     padding: 10,
     marginBottom: 12,
+  },
+  contenidoItemEliminando: {
+    opacity: 0.5,
   },
   poster: {
     width: 80,
@@ -200,7 +284,7 @@ const styles = StyleSheet.create({
     marginLeft: 15,
     justifyContent: 'center',
   },
-  tituloPelicula: {
+  tituloContenido: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
@@ -210,6 +294,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  tipoContainer: {
+    backgroundColor: '#E50914',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  tipoTexto: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 'bold',
   },
   fechaTexto: {
     color: '#888',
@@ -237,5 +333,10 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 12,
     width: 40,
+  },
+  deleteButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 10,
   },
 });

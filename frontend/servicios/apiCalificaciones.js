@@ -1,8 +1,9 @@
-<<<<<<< HEAD
-const BASE_URL = 'http://192.168.56.1:3000';
-=======
-const BASE_URL = 'http://192.168.18.31:3000';
->>>>>>> a7b27af115a1d50ac62be861c8a6938b90b6a295
+
+// Importar configuración automática que detecta PC vs móvil
+import { API_BASE_URL } from './config.js';
+
+// Renombrar para consistencia con otros archivos
+const BASE_URL = API_BASE_URL;
 
 // Obtener todas las calificaciones de un perfil
 export const obtenerCalificacionesPorPerfil = async (idPerfil) => {
@@ -25,11 +26,13 @@ export const obtenerCalificacionesPorPerfil = async (idPerfil) => {
 export const obtenerCalificacion = async (idPerfil, idContenido) => {
   try {
     const response = await fetch(`${BASE_URL}/calificaciones/perfil/${idPerfil}/contenido/${idContenido}`);
-    const data = await response.json();
     
     if (response.status === 404) {
-      return null; // No hay calificación
+      // No hay calificación - esto es normal, no es un error
+      return null;
     }
+    
+    const data = await response.json();
     
     if (!response.ok) {
       throw new Error(data.mensaje || 'Error al obtener calificación');
@@ -37,7 +40,10 @@ export const obtenerCalificacion = async (idPerfil, idContenido) => {
     
     return data.calificacion;
   } catch (error) {
-    console.error('Error al obtener calificación:', error);
+    // Solo mostrar error si no es un 404
+    if (error.message && !error.message.includes('404')) {
+      console.error('Error al obtener calificación:', error);
+    }
     return null;
   }
 };

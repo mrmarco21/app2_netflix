@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMiLista } from '../contextos/MiListaContext';
 import { useUsuario } from '../contextos/UsuarioContext';
+import { useHistorial } from '../contextos/HistorialContext';
 import ModalPinPerfil from '../componentes/ModalPinPerfil';
 
 // Servicios TMDB
@@ -29,6 +30,7 @@ import BannerDestacado from '../componentes/BannerDestacado';
 import SeccionContenido from '../componentes/SeccionContenido';
 import ModalCategorias from '../componentes/ModalCategorias';
 import NavegacionInferior from '../componentes/NavegacionInferior';
+import VideoPlayerSimulado from '../componentes/VideoPlayerSimulado';
 
 export default function InicioApp({ navigation, route }) {
   const { perfil, idUsuario } = route.params || {};
@@ -39,8 +41,12 @@ export default function InicioApp({ navigation, route }) {
   const [secciones, setSecciones] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [modalPinVisible, setModalPinVisible] = useState(false);
+  const [reproductorVisible, setReproductorVisible] = useState(false);
+  const [contenidoReproducir, setContenidoReproducir] = useState(null);
+  const [progresoInicial, setProgresoInicial] = useState(0);
 
-  const { toggleMiLista } = useMiLista();
+  const { toggleMiLista, miLista, cargando: cargandoMiLista } = useMiLista();
+  const { historial, obtenerHistorial } = useHistorial();
   const { 
     establecerUsuario, 
     establecerPerfilActual, 
@@ -494,17 +500,33 @@ export default function InicioApp({ navigation, route }) {
         }
 
       } else if (filtro === 'Mi lista') {
-        // Cargar películas populares para Mi lista
-        const peliculasPopulares = await obtenerPeliculasPopulares(1);
-        if (peliculasPopulares.results && peliculasPopulares.results.length > 0) {
+        // Usar contenido real de Mi Lista
+        if (miLista && miLista.length > 0) {
+          // Usar el primer elemento de Mi Lista como contenido destacado
+          const destacada = miLista[0];
+          nuevoContenidoDestacado = {
+            id: destacada.id_contenido,
+            titulo: destacada.titulo,
+            subtitulo: 'Mi Lista - Destacado',
+            imagen: destacada.imagen ? `https://image.tmdb.org/t/p/w500${destacada.imagen}` : null,
+            generos: ['Mi Lista', destacada.tipo === 'movie' ? 'Película' : 'Serie'],
+            descripcion: `Contenido agregado a tu lista personal`
+          };
+
           nuevasSecciones = [{
             titulo: 'Mi lista',
-            contenido: peliculasPopulares.results.slice(0, 4).map(item => ({
-              id: item.id,
-              titulo: item.title,
-              imagen: item.poster_url,
-              tipo: 'pelicula'
+            contenido: miLista.map(item => ({
+              id: item.id_contenido,
+              titulo: item.titulo,
+              imagen: item.imagen ? `https://image.tmdb.org/t/p/w500${item.imagen}` : null,
+              tipo: item.tipo === 'movie' ? 'pelicula' : 'serie'
             }))
+          }];
+        } else {
+          // Si Mi Lista está vacía, mostrar mensaje o contenido por defecto
+          nuevasSecciones = [{
+            titulo: 'Mi lista',
+            contenido: []
           }];
         }
       }
@@ -520,34 +542,64 @@ export default function InicioApp({ navigation, route }) {
     }
   };
 
-  // useEffect para cargar contenido cuando cambia el filtro
+  // useEffect para cargar contenido cuando cambia el filtro o miLista
   useEffect(() => {
     cargarContenido(filtroActivo);
-  }, [filtroActivo]);
+  }, [filtroActivo, miLista]);
 
-  // Cargar "Continuar viendo" con datos reales
+  // Cargar "Continuar viendo" con datos reales del historial
   useEffect(() => {
     const cargarContinuarViendo = async () => {
+      if (!perfilActual?.id) return;
+      
       try {
-        const seriesTendencia = await obtenerSeriesTendencia(1);
-        if (seriesTendencia.results && seriesTendencia.results.length > 0) {
-          const continuarViendoData = seriesTendencia.results.slice(0, 4).map((item, index) => ({
-            id: item.id,
-            titulo: item.name,
-            imagen: item.poster_url,
-            progreso: [0.65, 0.30, 0.85, 0.45][index] || 0.50 // Progreso simulado
-          }));
-          setContinuarViendo(continuarViendoData);
-        }
+        console.log('🔄 Cargando historial para continuar viendo...');
+        await obtenerHistorial(perfilActual.id);
       } catch (error) {
-        console.error('Error al cargar continuar viendo:', error);
-        // Fallback con datos mínimos si hay error
+        console.error('Error al cargar historial para continuar viendo:', error);
         setContinuarViendo([]);
       }
     };
     
     cargarContinuarViendo();
-  }, []);
+  }, [perfilActual?.id]);
+
+  // Procesar historial para mostrar "Continuar viendo"
+  useEffect(() => {
+    if (historial && historial.length > 0) {
+      // Filtrar elementos con progreso entre 5% y 90% (no terminados completamente)
+      const continuarViendoData = historial
+        .filter(item => item.progreso > 5 && item.progreso < 90)
+        .sort((a, b) => new Date(b.fechaVisualizacion) - new Date(a.fechaVisualizacion))
+        .slice(0, 6) // Máximo 6 elementos
+        .map(item => ({
+          id: item.idContenido,
+          titulo: item.titulo,
+          imagen: item.imagen ? `https://image.tmdb.org/t/p/w500${item.imagen}` : null,
+          imagenFondo: item.imagenFondo ? `https://image.tmdb.org/t/p/w1280${item.imagenFondo}` : null,
+          progreso: item.progreso / 100, // Convertir a decimal para la UI
+          tipo: item.tipo,
+          // Datos adicionales para el reproductor
+          datosCompletos: {
+            id: item.idContenido,
+            title: item.titulo,
+            name: item.titulo,
+            poster_path: item.imagen,
+            backdrop_path: item.imagenFondo,
+            overview: item.descripcion,
+            vote_average: item.calificacion,
+            release_date: item.fechaLanzamiento,
+            first_air_date: item.tipo === 'serie' ? item.fechaLanzamiento : null,
+            genre_ids: item.generos || []
+          }
+        }));
+
+      console.log('📺 Continuar viendo cargado:', continuarViendoData.length, 'elementos');
+      setContinuarViendo(continuarViendoData);
+    } else {
+      setContinuarViendo([]);
+    }
+  }, [historial]);
 
   // Categorías para el modal (actualizadas con las nuevas categorías)
   const categorias = [
@@ -560,6 +612,19 @@ export default function InicioApp({ navigation, route }) {
 
   const handleBuscarPress = () => {
     navigation.navigate('Buscar');
+  };
+
+  const handleReproducir = (contenido, progreso = 0) => {
+    // Si viene de "Continuar viendo", usar los datos completos y el progreso
+    if (contenido.datosCompletos) {
+      setContenidoReproducir(contenido.datosCompletos);
+      setProgresoInicial(contenido.progreso * 100); // Convertir a porcentaje
+      console.log('▶️ Reproduciendo desde continuar viendo:', contenido.titulo, `${Math.round(contenido.progreso * 100)}%`);
+    } else {
+      setContenidoReproducir(contenido);
+      setProgresoInicial(progreso);
+    }
+    setReproductorVisible(true);
   };
 
   if (cargando) {
@@ -594,6 +659,7 @@ export default function InicioApp({ navigation, route }) {
         <BannerDestacado
           contenidoDestacado={contenidoDestacado}
           onAgregarAMiLista={toggleMiLista}
+          onReproducir={handleReproducir}
         />
 
         {continuarViendo.length > 0 && (
@@ -602,6 +668,7 @@ export default function InicioApp({ navigation, route }) {
             contenido={continuarViendo}
             esContinuarViendo={true}
             onAgregarAMiLista={toggleMiLista}
+            onReproducir={handleReproducir}
           />
         )}
 
@@ -631,6 +698,18 @@ export default function InicioApp({ navigation, route }) {
         perfil={perfilActual}
         onAccesoPermitido={manejarAccesoPermitido}
         onCerrar={cerrarModalPin}
+      />
+
+      {/* Reproductor simulado */}
+      <VideoPlayerSimulado
+        visible={reproductorVisible}
+        onClose={() => {
+          setReproductorVisible(false);
+          setProgresoInicial(0); // Reset progress when closing
+        }}
+        titulo={contenidoReproducir?.titulo || 'Video'}
+        contenido={contenidoReproducir}
+        progresoInicial={progresoInicial}
       />
     </SafeAreaView>
   );
