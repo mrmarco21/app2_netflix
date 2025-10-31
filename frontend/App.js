@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MiListaProvider } from './contextos/MiListaContext';
 import { UsuarioProvider, useUsuario } from './contextos/UsuarioContext';
+import { HistorialProvider } from './contextos/HistorialContext';
 import Inicio from "./pantallas/Inicio";
 import Login from "./pantallas/Login";
 import Registro from "./pantallas/Registro";
@@ -62,6 +63,7 @@ export default function App() {
   return (
     <UsuarioProvider>
       <MiListaProvider>
+        <HistorialProvider>
         <SafeAreaProvider>
         <StatusBar 
           barStyle="dark-content"  // ← CAMBIADO A dark-content
@@ -83,6 +85,7 @@ export default function App() {
           <AppNavigator />
         </NavigationContainer>
       </SafeAreaProvider>
+      </HistorialProvider>
     </MiListaProvider>
 </UsuarioProvider>
   );

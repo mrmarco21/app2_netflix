@@ -1,4 +1,9 @@
-const BASE_URL = "http://192.168.18.31:3000/api/tmdb"; // Para web usar localhost
+
+// Importar configuración automática que detecta PC vs móvil
+import { API_BASE_URL } from './config.js';
+
+// URL base para la API TMDB - ahora usa configuración automática
+const BASE_URL = `${API_BASE_URL}/api/tmdb`;
 
 // ========================================
 // 🏠 PANTALLA DE INICIO
