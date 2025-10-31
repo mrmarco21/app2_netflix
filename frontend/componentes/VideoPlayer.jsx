@@ -7,6 +7,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
@@ -31,7 +32,15 @@ export default function VideoPlayer({ imagen, onPlay }) {
       </View>
       
       {/* Gradiente inferior para transición suave */}
-      <View style={styles.gradientBottom} />
+      <LinearGradient
+        colors={[
+          'transparent',
+          'rgba(0, 0, 0, 0.8)'
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.gradientBottom}
+      />
     </View>
   );
 }
@@ -74,6 +83,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 60,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'transparent',
   },
 });
