@@ -8,12 +8,17 @@ const CONFIG = {
   
   // URLs base según la plataforma
   getApiBaseUrl: () => {
+    // Si hay variable de entorno de Expo, usarla (ideal para dispositivos)
+    if (process.env.EXPO_PUBLIC_API_URL) {
+      return process.env.EXPO_PUBLIC_API_URL;
+    }
+
     // En desarrollo web (PC) usar localhost
     if (Platform.OS === 'web') {
-      return 'http://localhost:3000';
+      return `http://localhost:${CONFIG.PORT}`;
     }
     
-    // En móvil (iOS/Android) usar la IP real de la PC
+    // En móvil (iOS/Android) usar la IP real de la PC como fallback
     return `http://${CONFIG.PC_IP}:${CONFIG.PORT}`;
   }
 };

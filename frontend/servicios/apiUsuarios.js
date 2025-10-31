@@ -1,4 +1,3 @@
-
 // Importar configuración automática que detecta PC vs móvil
 import { API_BASE_URL } from './config.js';
 
