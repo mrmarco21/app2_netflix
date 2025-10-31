@@ -235,9 +235,9 @@ export default function Proximamente({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitulo}>Próximamente</Text>
-        <TouchableOpacity style={styles.botonBuscar}>
+        {/* <TouchableOpacity style={styles.botonBuscar}>
           <Ionicons name="search" size={24} color="white" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* Contenido */}

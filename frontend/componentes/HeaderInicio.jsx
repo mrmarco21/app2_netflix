@@ -2,23 +2,24 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function HeaderInicio({ filtroActivo, onPressBuscar }) {
+export default function HeaderInicio({ filtroActivo, onPressBuscar, onPressHistorial }) {
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
-        <Text style={styles.logo}>SOL SOL</Text>
+        <Text style={styles.logo}>MN</Text>
         <Text style={styles.titulo}>{filtroActivo}</Text>
       </View>
       <View style={styles.headerRight}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="download-outline" size={24} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity 
+                <TouchableOpacity 
           style={styles.iconButton} 
           onPress={onPressBuscar}
-        >
+          >
           <Ionicons name="search-outline" size={24} color="white" />
         </TouchableOpacity>
+        <TouchableOpacity style={styles.iconButton} onPress={onPressHistorial}>
+          <Ionicons name="time-outline" size={24} color="white" />
+        </TouchableOpacity>
+
       </View>
     </View>
   );

@@ -11,36 +11,36 @@ export default function SeccionMasFunciones({ navigation, paraAdultos, onToggleP
       icono: User,
       onPress: onGestionPress
     },
-    {
-      id: 'adultos',
-      titulo: 'Para adultos',
-      icono: Shield,
-      tieneSwitch: true,
-    },
-    {
-      id: 'ayuda',
-      titulo: 'Ayuda y Feedback',
-      icono: HelpCircle,
-      onPress: () => {
-        console.log('Navegar a Ayuda');
-        // navigation.navigate('Ayuda'); // Para implementar después
-      }
-    },
-    {
-      id: 'audio',
-      titulo: 'Audio y Subtítulos',
-      icono: Tv,
-      onPress: () => {
-        console.log('Navegar a Audio y Subtítulos');
-        // navigation.navigate('AudioSubtitulos'); // Para implementar después
-      }
-    },
-    {
-      id: 'configuraciones',
-      titulo: 'Configuraciones',
-      icono: Settings,
-      onPress: onConfiguracionPress
-    },
+    // {
+    //   id: 'adultos',
+    //   titulo: 'Para adultos',
+    //   icono: Shield,
+    //   tieneSwitch: true,
+    // },
+    // {
+    //   id: 'ayuda',
+    //   titulo: 'Ayuda y Feedback',
+    //   icono: HelpCircle,
+    //   onPress: () => {
+    //     console.log('Navegar a Ayuda');
+    //     // navigation.navigate('Ayuda'); // Para implementar después
+    //   }
+    // },
+    // {
+    //   id: 'audio',
+    //   titulo: 'Audio y Subtítulos',
+    //   icono: Tv,
+    //   onPress: () => {
+    //     console.log('Navegar a Audio y Subtítulos');
+    //     // navigation.navigate('AudioSubtitulos'); // Para implementar después
+    //   }
+    // },
+    // {
+    //   id: 'configuraciones',
+    //   titulo: 'Configuraciones',
+    //   icono: Settings,
+    //   onPress: onConfiguracionPress
+    // },
     {
       id: 'cerrar-sesion',
       titulo: 'Cerrar sesión',

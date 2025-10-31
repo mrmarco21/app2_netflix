@@ -1,18 +1,36 @@
 import React from 'react';
 import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 export default function ResultadosBusqueda({ resultados, textoBusqueda }) {
+  const navigation = useNavigation();
+
+  const navegarADetalle = (item) => {
+    // Normalizar el objeto para DetallePelicula
+    const contenidoParaNavegar = {
+      ...item,
+      id: item.id,
+      titulo: item.titulo || item.title || item.name || 'Sin título',
+      imagen: item.imagen || item.poster_url || item.poster_path
+        ? (item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : item.poster_url)
+        : undefined,
+      tipo: item.tipo === 'tv' ? 'serie' : (item.tipo === 'movie' ? 'pelicula' : (item.tipo || (item.name ? 'serie' : 'pelicula')))
+    };
+
+    navigation.navigate('DetallePelicula', { pelicula: contenidoParaNavegar });
+  };
+
   const renderResultadoItem = ({ item }) => (
-    <TouchableOpacity style={styles.resultadoItem}>
+    <TouchableOpacity style={styles.resultadoItem} onPress={() => navegarADetalle(item)}>
       <Image source={{ uri: item.imagen }} style={styles.resultadoImagen} />
       <View style={styles.resultadoInfo}>
         <Text style={styles.resultadoTitulo}>{item.titulo}</Text>
         <View style={styles.resultadoAcciones}>
-          <TouchableOpacity style={styles.botonPlay}>
+          <TouchableOpacity style={styles.botonPlay} onPress={() => navegarADetalle(item)}>
             <Ionicons name="play" size={16} color="black" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.botonInfo}>
+          <TouchableOpacity style={styles.botonInfo} onPress={() => navegarADetalle(item)}>
             <Ionicons name="information-circle-outline" size={20} color="white" />
           </TouchableOpacity>
         </View>

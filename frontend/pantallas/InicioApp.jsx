@@ -166,7 +166,8 @@ export default function InicioApp({ navigation, route }) {
             titulo: destacada.title,
             imagen: destacada.poster_url,
             generos: ['Popular', 'Destacado'],
-            descripcion: destacada.overview
+            descripcion: destacada.overview,
+            tipo: 'pelicula'
           };
         }
 
@@ -355,7 +356,8 @@ export default function InicioApp({ navigation, route }) {
             subtitulo: 'Destacado de la semana - Películas',
             imagen: destacada.poster_url,
             generos: ['Popular', 'Película'],
-            descripcion: destacada.overview
+            descripcion: destacada.overview,
+            tipo: 'pelicula'
           };
         }
 
@@ -407,7 +409,8 @@ export default function InicioApp({ navigation, route }) {
             subtitulo: 'Destacado de la semana - Series',
             imagen: destacada.poster_url,
             generos: ['Popular', 'Serie'],
-            descripcion: destacada.overview
+            descripcion: destacada.overview,
+            tipo: 'serie'
           };
         }
 
@@ -459,7 +462,8 @@ export default function InicioApp({ navigation, route }) {
             subtitulo: `Destacado de la semana - ${filtro}`,
             imagen: destacada.poster_url,
             generos: [filtro, 'Película'],
-            descripcion: destacada.overview
+            descripcion: destacada.overview,
+            tipo: 'pelicula'
           };
 
           nuevasSecciones = [{
@@ -485,7 +489,8 @@ export default function InicioApp({ navigation, route }) {
             subtitulo: `Destacado de la semana - ${filtro}`,
             imagen: destacada.poster_url,
             generos: [filtro, 'Serie'],
-            descripcion: destacada.overview
+            descripcion: destacada.overview,
+            tipo: 'serie'
           };
 
           nuevasSecciones = [{
@@ -510,7 +515,8 @@ export default function InicioApp({ navigation, route }) {
             subtitulo: 'Mi Lista - Destacado',
             imagen: destacada.imagen ? `https://image.tmdb.org/t/p/w500${destacada.imagen}` : null,
             generos: ['Mi Lista', destacada.tipo === 'movie' ? 'Película' : 'Serie'],
-            descripcion: `Contenido agregado a tu lista personal`
+            descripcion: `Contenido agregado a tu lista personal`,
+            tipo: destacada.tipo === 'movie' ? 'pelicula' : 'serie'
           };
 
           nuevasSecciones = [{
@@ -613,6 +619,9 @@ export default function InicioApp({ navigation, route }) {
   const handleBuscarPress = () => {
     navigation.navigate('Buscar');
   };
+  const handleHistorialPress = () => {
+    navigation.navigate('Historial');
+  };
 
   const handleReproducir = (contenido, progreso = 0) => {
     // Si viene de "Continuar viendo", usar los datos completos y el progreso
@@ -642,7 +651,8 @@ export default function InicioApp({ navigation, route }) {
 
       <HeaderInicio
         filtroActivo={filtroActivo}
-        onPressBuscar={() => navigation.navigate('Buscar')}
+        onPressBuscar={handleBuscarPress}
+        onPressHistorial={handleHistorialPress}
       />
 
       <FiltrosInicio

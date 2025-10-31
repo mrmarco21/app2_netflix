@@ -3,11 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function PerfilActual({ perfil, onPerfilPress }) {
-<<<<<<< HEAD
-   if (!perfil) {
-    return null; // O muestra un placeholder
-  }
-=======
 
    if (!perfil) {
     return null; // O muestra un placeholder
@@ -24,7 +19,6 @@ export default function PerfilActual({ perfil, onPerfilPress }) {
     console.log('⚠️ PerfilActual: No hay perfil para mostrar');
     return null;
   }
->>>>>>> origin/Rama-solsol
   return (
     <View style={styles.container}>
       <TouchableOpacity 

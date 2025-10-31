@@ -22,7 +22,21 @@ export default function BannerDestacado({ contenidoDestacado, onAgregarAMiLista,
 
   const handleBannerPress = () => {
     // Navegar a DetallePelicula con los datos del contenido destacado
-    navigation.navigate('DetallePelicula', { pelicula: contenidoDestacado });
+    const contenidoParaNavegar = {
+      ...contenidoDestacado,
+      id: contenidoDestacado.id,
+      titulo: contenidoDestacado.titulo || contenidoDestacado.title || contenidoDestacado.name,
+      imagen: contenidoDestacado.imagen || contenidoDestacado.poster_url,
+      tipo: contenidoDestacado.tipo
+        ? contenidoDestacado.tipo
+        : (Array.isArray(contenidoDestacado.generos) && contenidoDestacado.generos.includes('Serie')
+            ? 'serie'
+            : (Array.isArray(contenidoDestacado.generos) && contenidoDestacado.generos.includes('Película')
+                ? 'pelicula'
+                : (contenidoDestacado.name ? 'serie' : 'pelicula')))
+    };
+
+    navigation.navigate('DetallePelicula', { pelicula: contenidoParaNavegar });
   };
 
   if (!contenidoDestacado) return null;
