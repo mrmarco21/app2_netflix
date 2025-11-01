@@ -84,34 +84,32 @@ export default function Perfiles({ navigation, route }) {
 
   const cargarPerfiles = async () => {
     if (!idUsuario) {
-      console.log('⚠️ No hay usuario válido para cargar perfiles');
+      console.log('⚠️ Perfiles.jsx: No hay usuario válido para cargar perfiles');
       setCargando(false);
       return;
     }
     
     try {
       setCargando(true);
-      console.log('🔄 Cargando perfiles para usuario:', idUsuario);
+      console.log('🔄 Perfiles.jsx: Cargando perfiles para usuario:', idUsuario);
       const resultado = await obtenerPerfilesPorUsuario(idUsuario);
       
       if (resultado.success) {
         let perfilesData = resultado.data.perfiles || [];
+        console.log('📋 Perfiles.jsx: Perfiles encontrados:', perfilesData.length);
         
-        // Si no hay perfiles, crear uno por defecto con el nombre del usuario
-        if (perfilesData.length === 0 && usuario?.nombres) {
-          const resultadoCreacion = await crearPerfil(usuario.nombres, idUsuario);
-          if (resultadoCreacion.success) {
-            perfilesData = [resultadoCreacion.data.perfil];
-          }
-        }
-        
-        console.log('✅ Perfiles cargados para usuario', idUsuario, ':', perfilesData.length);
         setPerfiles(perfilesData);
+        
+        // No crear perfiles automáticamente aquí - se crean en el registro
+        
+        console.log('✅ Perfiles.jsx: Perfiles cargados para usuario', idUsuario, ':', perfilesData.length);
       } else {
-        Alert.alert('Error', resultado.mensaje);
+        console.error('❌ Perfiles.jsx: Error al obtener perfiles:', resultado.mensaje);
+        Alert.alert('Error', resultado.mensaje || 'No se pudieron cargar los perfiles');
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudieron cargar los perfiles');
+      console.error('❌ Perfiles.jsx: Error al cargar perfiles:', error);
+      Alert.alert('Error', 'Error de conexión. Verifica tu internet e inténtalo de nuevo.');
     } finally {
       setCargando(false);
     }

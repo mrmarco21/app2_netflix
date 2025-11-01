@@ -7,7 +7,7 @@ export default function SeccionMasFunciones({ navigation, paraAdultos, onToggleP
   const opciones = [
     {
       id: 'gestion',
-      titulo: 'Gestión',
+      titulo: 'Gestión de perfiles',
       icono: User,
       onPress: onGestionPress
     },

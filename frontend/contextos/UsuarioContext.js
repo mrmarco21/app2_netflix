@@ -137,25 +137,27 @@ export const UsuarioProvider = ({ children }) => {
     
     try {
       setCargandoPerfiles(true);
-      console.log('🔄 Cargando perfiles para usuario:', idUsuario);
+      console.log('🔄 UsuarioContext: Cargando perfiles para usuario:', idUsuario);
       
       const resultado = await obtenerPerfilesPorUsuario(idUsuario);
       
       if (resultado.success) {
         const perfiles = resultado.data.perfiles || [];
-        console.log('✅ Perfiles cargados:', perfiles.length);
+        console.log('✅ UsuarioContext: Perfiles cargados:', perfiles.length);
         setPerfilesDisponibles(perfiles);
+        
+        // No crear perfiles automáticamente aquí - se crean en el registro
       } else {
-        console.error('❌ Error al cargar perfiles:', resultado.mensaje);
+        console.error('❌ UsuarioContext: Error al cargar perfiles:', resultado.mensaje);
         setPerfilesDisponibles([]);
       }
     } catch (error) {
-      console.error('❌ Error al cargar perfiles:', error);
+      console.error('❌ UsuarioContext: Error al cargar perfiles:', error);
       setPerfilesDisponibles([]);
     } finally {
       setCargandoPerfiles(false);
     }
-  }, []); // Removemos perfilActual de las dependencias para evitar el loop
+  }, [usuario?.nombres]); // Añadimos usuario.nombres como dependencia
 
   // Función para cambiar de perfil
   const cambiarPerfil = useCallback(async (nuevoPerfil) => {

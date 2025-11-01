@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -26,7 +26,44 @@ export default function ModalPerfiles({
   const [mostrarAdministrar, setMostrarAdministrar] = useState(false);
   const [modalPinVisible, setModalPinVisible] = useState(false);
   const [perfilConPin, setPerfilConPin] = useState(null);
-  const { cambiarPerfil } = useUsuario();
+  const { cambiarPerfil, perfilesDisponibles, cargarPerfilesDisponibles, usuario } = useUsuario();
+  
+  // Imágenes de perfil disponibles
+  const imagenesPerfiles = [
+    require('../assets/perfil1.jpg'),
+    require('../assets/perfil2.jpg'),
+    require('../assets/perfil3.jpg'),
+    require('../assets/perfil4.jpg'),
+  ];
+
+  // Función para obtener la imagen del perfil basada en el ID
+  const obtenerImagenPerfil = (perfilId) => {
+    // Si no hay perfil actual, usar la primera imagen por defecto
+    if (!perfilId) return imagenesPerfiles[0];
+    
+    // Usar el ID del perfil para determinar qué imagen usar
+    const index = perfilId % imagenesPerfiles.length;
+    return imagenesPerfiles[index];
+  };
+  
+  // Usar perfiles del contexto si están disponibles, sino usar los props
+  const perfilesSinImagenes = perfilesDisponibles.length > 0 ? perfilesDisponibles : perfiles;
+  
+  // Agregar imágenes a los perfiles
+  const perfilesAMostrar = perfilesSinImagenes.map(perfil => ({
+    ...perfil,
+    avatar: obtenerImagenPerfil(perfil.id)
+  }));
+
+  // Efecto para recargar perfiles cuando se abre el modal
+  useEffect(() => {
+    if (visible && usuario?.id) {
+      console.log('🔄 ModalPerfiles: Modal abierto, recargando perfiles...');
+      if (cargarPerfilesDisponibles) {
+        cargarPerfilesDisponibles(usuario.id);
+      }
+    }
+  }, [visible, usuario?.id, cargarPerfilesDisponibles]);
 
   const cerrarAdministrar = () => {
     setMostrarAdministrar(false);
@@ -36,55 +73,86 @@ export default function ModalPerfiles({
     setMostrarAdministrar(true);
   };
 
-  const manejarActualizarPin = async (perfilId, pin) => {
+  const manejarActualizarPin = async (perfilId, nuevoPin) => {
     try {
-      console.log('📱 ModalPerfiles: Actualizando PIN para perfil:', perfilId);
-      await actualizarPinPerfil(perfilId, pin);
-      console.log('✅ ModalPerfiles: PIN actualizado exitosamente');
+      console.log('🔐 ModalPerfiles: Actualizando PIN para perfil:', perfilId);
+      const resultado = await actualizarPinPerfil(perfilId, nuevoPin);
       
-      // Actualizar la lista de perfiles inmediatamente
-      if (onActualizarPerfiles) {
-        console.log('🔄 ModalPerfiles: Actualizando lista de perfiles...');
-        await onActualizarPerfiles();
-        console.log('✅ ModalPerfiles: Lista de perfiles actualizada');
+      if (resultado.success) {
+        console.log('✅ ModalPerfiles: PIN actualizado exitosamente');
+        
+        // Recargar perfiles del contexto
+        if (cargarPerfilesDisponibles && usuario?.id) {
+          await cargarPerfilesDisponibles(usuario.id);
+        }
+        
+        // Llamar callback si existe
+        if (onActualizarPerfiles) {
+          onActualizarPerfiles();
+        }
+        
+        Alert.alert('Éxito', 'PIN actualizado correctamente');
+      } else {
+        console.error('❌ ModalPerfiles: Error al actualizar PIN:', resultado.mensaje);
+        Alert.alert('Error', resultado.mensaje || 'No se pudo actualizar el PIN');
       }
     } catch (error) {
       console.error('❌ ModalPerfiles: Error al actualizar PIN:', error);
-      throw error;
+      Alert.alert('Error', 'Error de conexión al actualizar el PIN');
     }
   };
 
   const manejarEditarPerfil = async (perfilId, nuevoNombre) => {
     try {
+      console.log('✏️ ModalPerfiles: Editando perfil:', perfilId, 'nuevo nombre:', nuevoNombre);
       const resultado = await actualizarPerfil(perfilId, nuevoNombre);
       if (resultado.success) {
-        // Actualizar la lista de perfiles inmediatamente
+        // Recargar perfiles del contexto
+        if (cargarPerfilesDisponibles && usuario?.id) {
+          await cargarPerfilesDisponibles(usuario.id);
+        }
+        
+        // Llamar callback si existe
         if (onActualizarPerfiles) {
           await onActualizarPerfiles();
         }
+        
+        console.log('✅ ModalPerfiles: Perfil editado exitosamente');
       } else {
         throw new Error(resultado.mensaje);
       }
     } catch (error) {
-      console.error('Error al editar perfil:', error);
+      console.error('❌ ModalPerfiles: Error al editar perfil:', error);
       throw error;
     }
   };
 
   const manejarEliminarPerfil = async (perfilId) => {
     try {
+      console.log('🗑️ ModalPerfiles: Eliminando perfil:', perfilId);
       const resultado = await eliminarPerfil(perfilId);
+      
       if (resultado.success) {
-        // Actualizar la lista de perfiles inmediatamente
+        console.log('✅ ModalPerfiles: Perfil eliminado exitosamente');
+        
+        // Recargar perfiles del contexto
+        if (cargarPerfilesDisponibles && usuario?.id) {
+          await cargarPerfilesDisponibles(usuario.id);
+        }
+        
+        // Llamar callback si existe
         if (onActualizarPerfiles) {
           await onActualizarPerfiles();
         }
+        
+        Alert.alert('Éxito', 'Perfil eliminado correctamente');
       } else {
-        throw new Error(resultado.mensaje);
+        console.error('❌ ModalPerfiles: Error al eliminar perfil:', resultado.mensaje);
+        Alert.alert('Error', resultado.mensaje || 'No se pudo eliminar el perfil');
       }
     } catch (error) {
-      console.error('Error al eliminar perfil:', error);
-      throw error;
+      console.error('❌ ModalPerfiles: Error al eliminar perfil:', error);
+      Alert.alert('Error', 'Error de conexión al eliminar el perfil');
     }
   };
 
@@ -140,7 +208,7 @@ export default function ModalPerfiles({
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.perfilesContainer}
             >
-              {perfiles.map((perfil) => (
+              {perfilesAMostrar.map((perfil) => (
                 <TouchableOpacity
                   key={perfil.id}
                   style={[
@@ -181,7 +249,7 @@ export default function ModalPerfiles({
 
       <ModalAdministrarPerfiles
         visible={mostrarAdministrar}
-        perfiles={perfiles}
+        perfiles={perfilesAMostrar}
         onCerrar={cerrarAdministrar}
         onActualizarPin={manejarActualizarPin}
         onEditarPerfil={manejarEditarPerfil}

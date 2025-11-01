@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Keyboard
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { registrarUsuario } from '../servicios/apiUsuarios';
+import { registrarUsuario, crearPerfil } from '../servicios/apiUsuarios';
 
 export default function Registro({ navigation }) {
     const [nombre, setNombre] = useState("");
@@ -69,9 +69,28 @@ export default function Registro({ navigation }) {
         setMensaje("");
 
         try {
+            console.log('📝 Iniciando registro de usuario...');
             const resultado = await registrarUsuario(nombre, correo, contraseña);
 
             if (resultado.success) {
+                console.log('✅ Usuario registrado exitosamente:', resultado.data.usuario.nombres);
+                
+                // Crear perfil por defecto inmediatamente después del registro
+                try {
+                    console.log('👤 Creando perfil por defecto...');
+                    const perfilPorDefecto = await crearPerfil(nombre, resultado.data.usuario.id);
+                    
+                    if (perfilPorDefecto.success) {
+                        console.log('✅ Perfil por defecto creado:', perfilPorDefecto.data.perfil.nombre);
+                    } else {
+                        console.warn('⚠️ No se pudo crear el perfil por defecto:', perfilPorDefecto.mensaje);
+                        // No mostramos error al usuario ya que puede crear el perfil después
+                    }
+                } catch (errorPerfil) {
+                    console.warn('⚠️ Error al crear perfil por defecto:', errorPerfil);
+                    // No mostramos error al usuario ya que puede crear el perfil después
+                }
+                
                 setMensaje(resultado.mensaje);
                 setTipoMensaje("exito");
 
@@ -91,7 +110,7 @@ export default function Registro({ navigation }) {
             }
 
         } catch (error) {
-            console.error(error);
+            console.error('❌ Error en registro:', error);
             setMensaje("Ocurrió un error inesperado. Inténtalo de nuevo.");
             setTipoMensaje("error");
         } finally {
