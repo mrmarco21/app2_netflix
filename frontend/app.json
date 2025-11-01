@@ -25,6 +25,7 @@
       }
     },
     "android": {
+      "package": "com.tuusuario.netflixclone",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

@@ -32,6 +32,11 @@ import ModalCategorias from '../componentes/ModalCategorias';
 import NavegacionInferior from '../componentes/NavegacionInferior';
 import VideoPlayerSimulado from '../componentes/VideoPlayerSimulado';
 
+
+// Estado global para recordar si InicioApp ya fue cargado (persiste entre navegaciones)
+let inicioAppYaCargado = false;
+let cacheGlobalContenido = {};
+
 export default function InicioApp({ navigation, route }) {
   const { perfil, idUsuario } = route.params || {};
   const [filtroActivo, setFiltroActivo] = useState('Inicio');
@@ -44,6 +49,46 @@ export default function InicioApp({ navigation, route }) {
   const [reproductorVisible, setReproductorVisible] = useState(false);
   const [contenidoReproducir, setContenidoReproducir] = useState(null);
   const [progresoInicial, setProgresoInicial] = useState(0);
+  
+  // Estados para el sistema de caché
+  const [contenidoCacheado, setContenidoCacheado] = useState({});
+  const [cargaInicial, setCargaInicial] = useState(true);
+  const [pantallaYaCargada, setPantallaYaCargada] = useState(false);
+  
+  // Función para limpiar caché antiguo (opcional, para evitar uso excesivo de memoria)
+  const limpiarCacheAntiguo = () => {
+    const ahora = Date.now();
+    const tiempoExpiracion = 30 * 60 * 1000; // 30 minutos
+    
+    setContenidoCacheado(prevCache => {
+      const nuevoCache = {};
+      Object.keys(prevCache).forEach(clave => {
+        if (ahora - prevCache[clave].timestamp < tiempoExpiracion) {
+          nuevoCache[clave] = prevCache[clave];
+        }
+      });
+      return nuevoCache;
+    });
+  };
+
+  // Función para forzar recarga del contenido (útil para pull-to-refresh)
+  const forzarRecargaContenido = () => {
+    console.log('🔄 Forzando recarga del contenido...');
+    const claveCache = `${filtroActivo}_${perfilActual?.id || 'default'}`;
+    
+    // Limpiar caché para el filtro actual
+    setContenidoCacheado(prevCache => {
+      const nuevoCache = { ...prevCache };
+      delete nuevoCache[claveCache];
+      return nuevoCache;
+    });
+    
+    // Resetear estado de pantalla cargada para forzar recarga
+    setPantallaYaCargada(false);
+    
+    // Forzar recarga
+    cargarContenido(filtroActivo, true);
+  };
 
   const { toggleMiLista, miLista, cargando: cargandoMiLista } = useMiLista();
   const { historial, obtenerHistorial } = useHistorial();
@@ -147,8 +192,22 @@ export default function InicioApp({ navigation, route }) {
   };
 
   // Función para cargar contenido según el filtro activo
-  const cargarContenido = async (filtro) => {
-    setCargando(true);
+  const cargarContenido = async (filtro, forzarRecarga = false) => {
+    // Verificar si el contenido ya está en caché y no se fuerza la recarga
+    const claveCache = `${filtro}_${perfilActual?.id || 'default'}`;
+    
+    if (!forzarRecarga && contenidoCacheado[claveCache] && !cargaInicial) {
+      console.log('📦 Usando contenido cacheado para:', filtro);
+      setContenidoDestacado(contenidoCacheado[claveCache].contenidoDestacado);
+      setSecciones(contenidoCacheado[claveCache].secciones);
+      return;
+    }
+
+    // Solo mostrar loading si es la primera carga de la aplicación
+    if (!pantallaYaCargada) {
+      setCargando(true);
+    }
+    
     try {
       let nuevasSecciones = [];
       let nuevoContenidoDestacado = null;
@@ -540,18 +599,104 @@ export default function InicioApp({ navigation, route }) {
       setContenidoDestacado(nuevoContenidoDestacado);
       setSecciones(nuevasSecciones);
 
+      // Guardar en caché global y local
+      const claveCache = `${filtro}_${perfilActual?.id || 'default'}`;
+      
+      // Caché local (mantener para compatibilidad)
+      if (filtro !== 'Mi lista') {
+        setContenidoCacheado(prevCache => ({
+          ...prevCache,
+          [claveCache]: {
+            contenidoDestacado: nuevoContenidoDestacado,
+            secciones: nuevasSecciones,
+            timestamp: Date.now()
+          }
+        }));
+      }
+
+      // Caché global (persiste entre navegaciones)
+      cacheGlobalContenido[claveCache] = {
+        contenidoDestacado: nuevoContenidoDestacado,
+        secciones: nuevasSecciones,
+        timestamp: Date.now()
+      };
+      
+      console.log('💾 Contenido guardado en caché global y local para:', filtro);
+
     } catch (error) {
       console.error('Error al cargar contenido:', error);
       // Mantener contenido por defecto en caso de error
     } finally {
       setCargando(false);
+      if (cargaInicial) {
+        setCargaInicial(false);
+        setPantallaYaCargada(true);
+        // Marcar que InicioApp ya fue cargado globalmente
+        inicioAppYaCargado = true;
+        console.log('✅ InicioApp marcado como cargado globalmente');
+      }
     }
   };
 
   // useEffect para cargar contenido cuando cambia el filtro o miLista
   useEffect(() => {
-    cargarContenido(filtroActivo);
+    // Cargar contenido siempre que cambie el filtro
+    if (filtroActivo === 'Mi lista') {
+      // Mi lista siempre se recarga porque puede cambiar dinámicamente
+      cargarContenido(filtroActivo, true);
+    } else {
+      // Para otros filtros, usar caché si está disponible
+      cargarContenido(filtroActivo, false);
+    }
   }, [filtroActivo, miLista]);
+
+  // useEffect para manejar la navegación y evitar recargas innecesarias
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      console.log('🎯 InicioApp enfocado - verificando si necesita recarga...');
+      console.log('📊 Estado actual:', {
+        cargaInicial,
+        filtroActivo,
+        pantallaYaCargada,
+        inicioAppYaCargado,
+        perfilId: perfilActual?.id
+      });
+
+      // Si InicioApp ya fue cargado globalmente, usar caché inmediatamente sin loading
+      if (inicioAppYaCargado) {
+        const claveCache = `${filtroActivo}_${perfilActual?.id || 'default'}`;
+        const cacheValido = cacheGlobalContenido[claveCache] && 
+                           cacheGlobalContenido[claveCache].contenidoDestacado && 
+                           cacheGlobalContenido[claveCache].secciones;
+
+        if (cacheValido) {
+          console.log('📦 Aplicando contenido cacheado globalmente (navegación instantánea)');
+          setContenidoDestacado(cacheGlobalContenido[claveCache].contenidoDestacado);
+          setSecciones(cacheGlobalContenido[claveCache].secciones);
+          setCargando(false);
+          setPantallaYaCargada(true);
+          return;
+        }
+      }
+
+      // Solo para la primera carga absoluta de la aplicación
+      if (!inicioAppYaCargado) {
+        console.log('🔄 Primera carga absoluta - cargando contenido');
+        cargarContenido(filtroActivo, true);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, filtroActivo, perfilActual?.id]);
+
+  // useEffect para limpiar caché antiguo periódicamente
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      limpiarCacheAntiguo();
+    }, 10 * 60 * 1000); // Limpiar cada 10 minutos
+
+    return () => clearInterval(intervalo);
+  }, []);
 
   // Cargar "Continuar viendo" con datos reales del historial
   useEffect(() => {
@@ -622,6 +767,10 @@ export default function InicioApp({ navigation, route }) {
   const handleHistorialPress = () => {
     navigation.navigate('Historial');
   };
+  
+  const handleLimpiarFiltro = () => {
+    setFiltroActivo('Inicio');
+  };
 
   const handleReproducir = (contenido, progreso = 0) => {
     // Si viene de "Continuar viendo", usar los datos completos y el progreso
@@ -653,6 +802,7 @@ export default function InicioApp({ navigation, route }) {
         filtroActivo={filtroActivo}
         onPressBuscar={handleBuscarPress}
         onPressHistorial={handleHistorialPress}
+        onLimpiarFiltro={handleLimpiarFiltro}
       />
 
       <FiltrosInicio

@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 // Configuración de URLs para diferentes plataformas
 const CONFIG = {
   // IP de tu PC en la red local (obtenida con ipconfig)
-  PC_IP: '192.168.137.1',
+  PC_IP: '192.168.18.31',
   PORT: '3000',
   
   // URLs base según la plataforma

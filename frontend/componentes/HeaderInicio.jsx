@@ -2,24 +2,33 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function HeaderInicio({ filtroActivo, onPressBuscar, onPressHistorial }) {
+export default function HeaderInicio({ filtroActivo, onPressBuscar, onPressHistorial, onLimpiarFiltro }) {
+  const mostrarBotonX = filtroActivo && filtroActivo !== 'Inicio';
+
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
-        <Text style={styles.logo}>MN</Text>
+        <Text style={styles.logo}>N</Text>
         <Text style={styles.titulo}>{filtroActivo}</Text>
+        {mostrarBotonX && (
+          <TouchableOpacity 
+            style={styles.botonX} 
+            onPress={onLimpiarFiltro}
+          >
+            <Ionicons name="close" size={20} color="white" />
+          </TouchableOpacity>
+        )}
       </View>
       <View style={styles.headerRight}>
-                <TouchableOpacity 
+        <TouchableOpacity 
           style={styles.iconButton} 
           onPress={onPressBuscar}
-          >
+        >
           <Ionicons name="search-outline" size={24} color="white" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton} onPress={onPressHistorial}>
           <Ionicons name="time-outline" size={24} color="white" />
         </TouchableOpacity>
-
       </View>
     </View>
   );
@@ -41,7 +50,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     color: '#E50914',
-    fontSize: 28,
+    fontSize: 33,
     fontWeight: 'bold',
     marginRight: 15,
   },
@@ -49,6 +58,12 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: '600',
+  },
+  botonX: {
+    marginLeft: 10,
+    padding: 5,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   headerRight: {
     flexDirection: 'row',
