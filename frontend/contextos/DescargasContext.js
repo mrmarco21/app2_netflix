@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUsuario } from './UsuarioContext';
 
 const DescargasContext = createContext();
@@ -28,34 +30,56 @@ export const DescargasProvider = ({ children }) => {
   const intervalosRef = useRef({});
   const { perfilActual, usuario } = useUsuario();
 
-  // Persistencia en web (localStorage)
+  // Persistencia en web (localStorage) y móvil (AsyncStorage)
   const STORAGE_KEY = 'descargas_map_v1';
-  const puedePersistir = typeof window !== 'undefined' && !!window.localStorage;
+  const esWeb = Platform.OS === 'web';
+  const puedePersistirWeb = esWeb && typeof window !== 'undefined' && !!window.localStorage;
 
   // Rehidratar al montar
   useEffect(() => {
-    if (!puedePersistir) return;
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          setDescargasPorPerfilUsuario(parsed);
+    const rehidratar = async () => {
+      try {
+        if (puedePersistirWeb) {
+          const raw = window.localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+              setDescargasPorPerfilUsuario(parsed);
+            }
+          }
+          return;
         }
+
+        // Móvil: AsyncStorage
+        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            setDescargasPorPerfilUsuario(parsed);
+          }
+        }
+      } catch (e) {
+        console.warn('No se pudo rehidratar descargas:', e?.message || e);
       }
-    } catch (e) {
-      console.warn('No se pudo rehidratar descargas:', e?.message || e);
-    }
+    };
+    rehidratar();
   }, []);
 
   // Guardar cambios
   useEffect(() => {
-    if (!puedePersistir) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(descargasPorPerfilUsuario));
-    } catch (e) {
-      console.warn('No se pudo persistir descargas:', e?.message || e);
-    }
+    const persistir = async () => {
+      try {
+        const data = JSON.stringify(descargasPorPerfilUsuario);
+        if (puedePersistirWeb) {
+          window.localStorage.setItem(STORAGE_KEY, data);
+        } else {
+          await AsyncStorage.setItem(STORAGE_KEY, data);
+        }
+      } catch (e) {
+        console.warn('No se pudo persistir descargas:', e?.message || e);
+      }
+    };
+    persistir();
   }, [descargasPorPerfilUsuario]);
 
   // Limpieza de intervalos al desmontar
@@ -189,7 +213,19 @@ export const DescargasProvider = ({ children }) => {
   const perfilKeyActual = perfilActual?.id
     ? `${usuario?.id ?? 'anon'}:${perfilActual.id}`
     : null;
-  const descargas = perfilKeyActual ? (descargasPorPerfilUsuario[perfilKeyActual] || []) : [];
+  const [descargas, setDescargas] = useState([]);
+
+  // Actualizar descargas cuando cambie el usuario o perfil actual
+  useEffect(() => {
+    if (perfilKeyActual) {
+      const descargasDelPerfil = descargasPorPerfilUsuario[perfilKeyActual] || [];
+      console.log(`📱 Cargando ${descargasDelPerfil.length} descargas para perfil: ${perfilActual?.nombre} (${perfilKeyActual})`);
+      setDescargas(descargasDelPerfil);
+    } else {
+      console.log('📱 No hay perfil activo, limpiando descargas');
+      setDescargas([]);
+    }
+  }, [perfilKeyActual, descargasPorPerfilUsuario, perfilActual?.nombre]);
 
   const value = {
     descargas,

@@ -4,6 +4,10 @@ import { API_BASE_URL } from './config.js';
 // Función para registrar un nuevo usuario
 export const registrarUsuario = async (nombres, correo, contrasena) => {
   try {
+    // Agregar timeout para mejorar experiencia en móvil
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s
+
     const response = await fetch(`${API_BASE_URL}/usuarios/registro`, {
       method: "POST",
       headers: {
@@ -14,8 +18,10 @@ export const registrarUsuario = async (nombres, correo, contrasena) => {
         correo,
         contrasena: contrasena,
       }),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
     const data = await response.json();
 
     if (!response.ok) {
@@ -28,6 +34,12 @@ export const registrarUsuario = async (nombres, correo, contrasena) => {
       mensaje: data.mensaje || "Usuario registrado exitosamente",
     };
   } catch (error) {
+    if (error.name === 'AbortError') {
+      return {
+        success: false,
+        mensaje: "Tiempo de espera agotado. Verifica tu conexión a internet.",
+      };
+    }
     return {
       success: false,
       mensaje: error.message || "Error de conexión",
@@ -98,6 +110,9 @@ export const verificarPinPerfil = async (perfilId, pin) => {
 // Función para iniciar sesión
 export const loginUsuario = async (correo, contrasena) => {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s
+
     const response = await fetch(`${API_BASE_URL}/usuarios/login`, {
       method: "POST",
       headers: {
@@ -107,8 +122,10 @@ export const loginUsuario = async (correo, contrasena) => {
         correo: correo,
         contrasena,
       }),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
     const data = await response.json();
 
     if (!response.ok) {
@@ -121,6 +138,12 @@ export const loginUsuario = async (correo, contrasena) => {
       mensaje: data.mensaje || "Inicio de sesión exitoso",
     };
   } catch (error) {
+    if (error.name === 'AbortError') {
+      return {
+        success: false,
+        mensaje: "Tiempo de espera agotado. Verifica tu conexión a internet.",
+      };
+    }
     return {
       success: false,
       mensaje: error.message || "Error de conexión",

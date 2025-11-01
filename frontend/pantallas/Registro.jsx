@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { registrarUsuario, crearPerfil } from '../servicios/apiUsuarios';
+import { useUsuario } from '../contextos/UsuarioContext';
 
 export default function Registro({ navigation }) {
     const [nombre, setNombre] = useState("");
@@ -11,6 +12,7 @@ export default function Registro({ navigation }) {
     const [contraseña, setContraseña] = useState("");
     const [cargando, setCargando] = useState(false);
     const [mostrarContrasena, setMostrarContrasena] = useState(false);
+    const { establecerUsuario } = useUsuario();
 
     // Mensaje para mostrar en pantalla (reemplaza los Alert)
     const [mensaje, setMensaje] = useState("");
@@ -99,10 +101,17 @@ export default function Registro({ navigation }) {
                 setCorreo('');
                 setContraseña('');
 
-                // Navega al login después de 1.5s
-                setTimeout(() => {
+                // Auto-login: guardar sesión y navegar a Perfiles
+                if (resultado.data?.usuario) {
+                    try {
+                        await establecerUsuario(resultado.data.usuario);
+                        navigation.navigate('Perfiles', { idUsuario: resultado.data.usuario.id });
+                    } catch (e) {
+                        navigation.navigate('Login');
+                    }
+                } else {
                     navigation.navigate('Login');
-                }, 1500);
+                }
 
             } else {
                 setMensaje(resultado.mensaje);
