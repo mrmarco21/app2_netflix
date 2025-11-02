@@ -13,6 +13,7 @@ import { useMiLista } from '../contextos/MiListaContext';
 import { useUsuario } from '../contextos/UsuarioContext';
 import { useHistorial } from '../contextos/HistorialContext';
 import { obtenerDetallePelicula, obtenerDetalleSerie, obtenerSerieCompleta } from '../servicios/tmdbService';
+import { buscarTrailerEnYouTube, obtenerTrailerManual, obtenerTrailerManualEpisodio } from '../servicios/youtubeService';
 import * as apiCalificaciones from '../servicios/apiCalificaciones';
 
 // Componentes modulares
@@ -26,6 +27,9 @@ import PeliculasSimilares from '../componentes/PeliculasSimilares';
 import TemporadasSerie from '../componentes/TemporadasSerie';
 import ModalCalificacion from '../componentes/ModalCalificacion';
 import VideoPlayerSimulado from '../componentes/VideoPlayerSimulado';
+import ReproductorWeb from '../componentes/ReproductorWeb';
+import ReproductorYouTube from '../componentes/ReproductorYouTube';
+import { Platform } from 'react-native';
 import { useDescargas } from '../contextos/DescargasContext';
 
 export default function DetallePelicula({ navigation, route }) {
@@ -339,9 +343,107 @@ export default function DetallePelicula({ navigation, route }) {
     console.log('Reproduciendo:', peliculaData.titulo);
   };
 
-  const handleVer = () => {
-    // Mostrar el reproductor simulado
-    console.log('Ver película:', peliculaData.titulo);
+  const [reproductorWebVisible, setReproductorWebVisible] = useState(false);
+  const [trailerFallbackUrl, setTrailerFallbackUrl] = useState(null);
+  // Extrae la URL del tráiler desde la respuesta de TMDB (película o serie)
+  const extraerTrailerUrl = (det) => {
+    try {
+      if (!det) return null;
+      // Campos directos comunes
+      if (det.trailer_url) return det.trailer_url;
+      if (det.trailer && typeof det.trailer === 'string') return det.trailer;
+      if (det.video_key) return `https://www.youtube.com/watch?v=${det.video_key}`;
+      if (det.trailer_oficial?.key) return `https://www.youtube.com/watch?v=${det.trailer_oficial.key}`;
+
+      // Estructura estándar de TMDB: videos.results
+      const results = det?.videos?.results || det?.videos || det?.videos_results;
+      if (Array.isArray(results) && results.length) {
+        const pick =
+          results.find(v => (v.type || '').toLowerCase() === 'trailer' && (v.site || '').toLowerCase() === 'youtube' && (v.official || /oficial/i.test(v.name || ''))) ||
+          results.find(v => (v.type || '').toLowerCase() === 'trailer' && (v.site || '').toLowerCase() === 'youtube') ||
+          results.find(v => (v.site || '').toLowerCase() === 'youtube');
+        if (pick?.key) return `https://www.youtube.com/watch?v=${pick.key}`;
+        if (pick?.url) return pick.url;
+      }
+    } catch (e) {
+      // Ignorar y devolver null
+    }
+    return null;
+  };
+
+  // URL del tráiler priorizando detalles completos si están cargados
+  // Priorizar el trailer manual si existe para el título
+  const tituloBase = peliculaData?.titulo || peliculaData?.name;
+  const manualUrl = obtenerTrailerManual(tituloBase);
+  const trailerUrl = manualUrl || extraerTrailerUrl(detallesCompletos || peliculaData);
+  const URL_REPRODUCCION = trailerUrl || null;
+  if (URL_REPRODUCCION) {
+    console.log('🎥 URL de tráiler:', URL_REPRODUCCION);
+  } else {
+    console.log('⚠️ No se encontró tráiler en TMDB para:', peliculaData?.titulo);
+  }
+
+  const handleVer = async () => {
+    console.log('Ver película:', peliculaData?.titulo);
+    if (URL_REPRODUCCION) {
+      // Abrir reproductor WebView (YouTube embebido) en horizontal
+      console.log('✅ Abriendo reproductor con URL:', URL_REPRODUCCION);
+      setReproductorWebVisible(true);
+    } else {
+      // Fallback: buscar tráiler en YouTube según el título
+      try {
+        const url = await buscarTrailerEnYouTube(
+          peliculaData?.titulo || peliculaData?.name,
+          peliculaData?.año
+        );
+        if (url) {
+          console.log('🔎 Tráiler encontrado en YouTube (fallback):', url);
+          setTrailerFallbackUrl(url);
+          setReproductorWebVisible(true);
+        } else {
+          // Fallback final: reproductor simulado
+          console.log('🧪 Usando reproductor simulado: sin URL de YouTube');
+          setReproductorVisible(true);
+        }
+      } catch (e) {
+        console.log('Error al buscar tráiler en YouTube:', e);
+        setReproductorVisible(true);
+      }
+    }
+  };
+
+  // Reproducir episodio desde TemporadasSerie
+  const handleReproducirEpisodio = async (episodio) => {
+    const serieTitulo = peliculaData?.titulo || peliculaData?.name;
+    const numero = episodio?.episode_number;
+    const nombre = episodio?.name;
+    console.log('📺 Solicitud de reproducción de episodio:', { serieTitulo, numero, nombre });
+
+    // 1) Intentar mapeo manual de episodio
+    const manualEp = obtenerTrailerManualEpisodio(serieTitulo, numero, nombre);
+    if (manualEp) {
+      console.log('🎬 Tráiler manual de episodio encontrado =>', manualEp);
+      setTrailerFallbackUrl(manualEp);
+      setReproductorWebVisible(true);
+      return;
+    }
+
+    // 2) Fallback: buscar en YouTube combinando serie + episodio
+    try {
+      const query = `${serieTitulo} episodio ${numero} ${nombre} trailer`;
+      const url = await buscarTrailerEnYouTube(query, peliculaData?.año);
+      if (url) {
+        console.log('🔎 Tráiler de episodio encontrado en YouTube:', url);
+        setTrailerFallbackUrl(url);
+        setReproductorWebVisible(true);
+        return;
+      }
+    } catch (e) {
+      console.log('❗ Error buscando tráiler de episodio en YouTube:', e);
+    }
+
+    // 3) Fallback final: reproductor simulado
+    console.log('🧪 Usando reproductor simulado para episodio: sin URL');
     setReproductorVisible(true);
   };
 
@@ -460,6 +562,7 @@ export default function DetallePelicula({ navigation, route }) {
           <TemporadasSerie 
             temporadas={esSerie ? (detallesCompletos?.temporadas || detallesCompletos?.seasons || []) : []}
             esSerie={esSerie}
+            onReproducirEpisodio={handleReproducirEpisodio}
           />
 
           <PeliculasSimilares 
@@ -484,6 +587,23 @@ export default function DetallePelicula({ navigation, route }) {
         onClose={() => setReproductorVisible(false)}
         titulo={peliculaData?.titulo || 'Video'}
       />
+
+      {/* Reproducción: YouTube nativo en iOS/Android; iframe via WebView en web */}
+      {Platform.OS === 'web' ? (
+        <ReproductorWeb
+          visible={reproductorWebVisible}
+          onClose={() => setReproductorWebVisible(false)}
+          url={trailerFallbackUrl || URL_REPRODUCCION}
+          titulo={peliculaData?.titulo || 'Video'}
+        />
+      ) : (
+        <ReproductorYouTube
+          visible={reproductorWebVisible}
+          onClose={() => setReproductorWebVisible(false)}
+          url={trailerFallbackUrl || URL_REPRODUCCION}
+          titulo={peliculaData?.titulo || 'Video'}
+        />
+      )}
     </SafeAreaView>
   );
 }

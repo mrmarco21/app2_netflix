@@ -22,7 +22,6 @@ import ModalCalificacion from "./componentes/ModalCalificacion";
 import MiLista from './pantallas/MiLista';
 import Historial from './pantallas/Historial';
 // Importar la pantalla de prueba TMDB
-import PantallaPruebaTMDB from "./pantallas/PantallaPruebaTMDB"
 import NetflixIntro from "./pantallas/NetflixIntro";
 
 const Stack = createNativeStackNavigator();
@@ -49,6 +48,9 @@ function AppNavigator() {
       <Stack.Screen name="Proximamente" component={Proximamente}/>
       <Stack.Screen name="Descargas" component={Descargas}/>
       <Stack.Screen name="MiNetflix" component={MiNetflix}/>
+      <Stack.Screen name="Cuenta" component={require('./pantallas/Cuenta').default}/>
+      <Stack.Screen name="EditarEmail" component={require('./pantallas/EditarEmail').default}/>
+      <Stack.Screen name="CambiarContrasena" component={require('./pantallas/CambiarContrasena').default}/>
       <Stack.Screen name="DetallePelicula" component={DetallePelicula}/>
       <Stack.Screen name="CategoriaCompleta" component={CategoriaCompleta}/>
       <Stack.Screen name="ModalCalificacion" component={ModalCalificacion}/>

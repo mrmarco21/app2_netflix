@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ScrollView, BackHandler, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, KeyboardAvoidingView, ScrollView, BackHandler, Alert, Modal } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { loginUsuario } from '../servicios/apiUsuarios';
+import { loginUsuario, recuperarContrasenaPorCorreo } from '../servicios/apiUsuarios';
 import { useUsuario } from '../contextos/UsuarioContext';
 
 
@@ -13,6 +13,12 @@ export default function Login({ navigation }) {
     const [mensaje, setMensaje] = useState('');
     const [cargando, setCargando] = useState(false);
     const [mostrarContrasena, setMostrarContrasena] = useState(false);
+    // Estados para recuperación de contraseña
+    const [mostrarRecuperacion, setMostrarRecuperacion] = useState(false);
+    const [correoRecuperacion, setCorreoRecuperacion] = useState('');
+    const [nuevaContrasenaRecuperacion, setNuevaContrasenaRecuperacion] = useState('');
+    const [mostrandoNuevaRecuperacion, setMostrandoNuevaRecuperacion] = useState(false);
+    const [cargandoRecuperacion, setCargandoRecuperacion] = useState(false);
     
     const { establecerUsuario } = useUsuario();
 
@@ -85,6 +91,42 @@ export default function Login({ navigation }) {
             Alert.alert('Error', 'Error de conexión. Intenta nuevamente.');
         } finally {
             setCargando(false);
+        }
+    };
+
+    // Manejar recuperación de contraseña por correo
+    const manejarRecuperacion = async () => {
+        const email = (correoRecuperacion || '').trim();
+        const nueva = (nuevaContrasenaRecuperacion || '').trim();
+
+        if (!email) {
+            Alert.alert('Correo requerido', 'Ingresa tu correo electrónico.');
+            return;
+        }
+        if (!email.includes('@')) {
+            Alert.alert('Correo inválido', 'Ingresa un correo electrónico válido.');
+            return;
+        }
+        if (!nueva || nueva.length < 5) {
+            Alert.alert('Contraseña inválida', 'La nueva contraseña debe tener al menos 5 caracteres.');
+            return;
+        }
+
+        setCargandoRecuperacion(true);
+        try {
+            const resp = await recuperarContrasenaPorCorreo(email, nueva);
+            if (resp.success) {
+                Alert.alert('Éxito', resp.mensaje || 'Contraseña actualizada exitosamente');
+                setMostrarRecuperacion(false);
+                setCorreoRecuperacion('');
+                setNuevaContrasenaRecuperacion('');
+            } else {
+                Alert.alert('Error', resp.mensaje || 'No se pudo actualizar la contraseña');
+            }
+        } catch (e) {
+            Alert.alert('Error', e.message || 'Error de conexión');
+        } finally {
+            setCargandoRecuperacion(false);
         }
     };
 
@@ -169,6 +211,10 @@ export default function Login({ navigation }) {
                                     </Text>
                                 </TouchableOpacity>
 
+                                <TouchableOpacity onPress={() => setMostrarRecuperacion(true)} style={estilos.linkRecuperacion}>
+                                    <Text style={estilos.textoLink}>¿Olvidaste tu contraseña?</Text>
+                                </TouchableOpacity>
+
                                 <TouchableOpacity onPress={() => navigation.navigate("Registro")} style={estilos.btnRegistrar}>
                                     <Text style={estilos.textoAlternativo}>
                                         ¿No tienes una cuenta?
@@ -180,6 +226,62 @@ export default function Login({ navigation }) {
                     </KeyboardAvoidingView>
                 </View>
             </LinearGradient>
+            {/* Modal de recuperación de contraseña */}
+            <Modal
+                visible={mostrarRecuperacion}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setMostrarRecuperacion(false)}
+            >
+                <View style={estilos.modalOverlay}>
+                    <View style={estilos.modalContenido}>
+                        <Text style={estilos.modalTitulo}>Recuperar contraseña</Text>
+                        <TextInput
+                            style={estilos.input}
+                            placeholder="Correo electrónico"
+                            placeholderTextColor="#aaa"
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            value={correoRecuperacion}
+                            onChangeText={setCorreoRecuperacion}
+                        />
+
+                        <View style={estilos.inputWrapper}>
+                            <TextInput
+                                style={[estilos.input, estilos.inputConIcono]}
+                                placeholder="Nueva contraseña"
+                                placeholderTextColor="#aaa"
+                                secureTextEntry={!mostrandoNuevaRecuperacion}
+                                value={nuevaContrasenaRecuperacion}
+                                onChangeText={setNuevaContrasenaRecuperacion}
+                                autoCapitalize="none"
+                            />
+                            <TouchableOpacity
+                                accessibilityRole="button"
+                                accessibilityLabel={mostrandoNuevaRecuperacion ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                style={estilos.toggleIcon}
+                                onPress={() => setMostrandoNuevaRecuperacion(prev => !prev)}
+                            >
+                                <Ionicons name={mostrandoNuevaRecuperacion ? 'eye-off' : 'eye'} size={22} color="#bbb" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[estilos.boton, cargandoRecuperacion && estilos.botonDeshabilitado]}
+                            onPress={manejarRecuperacion}
+                            disabled={cargandoRecuperacion}
+                        >
+                            <Text style={estilos.textoBoton}>
+                                {cargandoRecuperacion ? 'Actualizando...' : 'Confirmar cambio'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => setMostrarRecuperacion(false)} style={estilos.linkRecuperacionCerrar}>
+                            <Text style={estilos.textoLink}>Cancelar</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -301,5 +403,40 @@ const estilos = StyleSheet.create({
         textDecorationLine: 'underline',
         marginLeft: 5,
         fontSize: 15
+    },
+    linkRecuperacion: {
+        marginTop: 12,
+    },
+    textoLink: {
+        color: '#cccccc',
+        textDecorationLine: 'underline',
+        fontSize: 15,
+        textAlign: 'center'
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 25,
+    },
+    modalContenido: {
+        width: '100%',
+        backgroundColor: '#000000',
+        borderRadius: 10,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: '#74747497',
+    },
+    modalTitulo: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#ffffff',
+        marginBottom: 15,
+        textAlign: 'center',
+    },
+    linkRecuperacionCerrar: {
+        marginTop: 12,
+        alignItems: 'center'
     }
 });

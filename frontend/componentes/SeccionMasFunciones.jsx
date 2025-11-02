@@ -11,6 +11,14 @@ export default function SeccionMasFunciones({ navigation, paraAdultos, onToggleP
       icono: User,
       onPress: onGestionPress
     },
+
+    {
+      id: 'config',
+      titulo: 'Configuración',
+      icono: Settings,
+      onPress: onConfiguracionPress
+    },
+
     // {
     //   id: 'adultos',
     //   titulo: 'Para adultos',

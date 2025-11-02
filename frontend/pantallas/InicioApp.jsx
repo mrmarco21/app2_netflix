@@ -31,6 +31,10 @@ import SeccionContenido from '../componentes/SeccionContenido';
 import ModalCategorias from '../componentes/ModalCategorias';
 import NavegacionInferior from '../componentes/NavegacionInferior';
 import VideoPlayerSimulado from '../componentes/VideoPlayerSimulado';
+import ReproductorWeb from '../componentes/ReproductorWeb';
+import ReproductorYouTube from '../componentes/ReproductorYouTube';
+import { Platform } from 'react-native';
+import { buscarTrailerEnYouTube, obtenerTrailerManual } from '../servicios/youtubeService';
 
 
 // Estado global para recordar si InicioApp ya fue cargado (persiste entre navegaciones)
@@ -772,12 +776,38 @@ export default function InicioApp({ navigation, route }) {
     setFiltroActivo('Inicio');
   };
 
-  const handleReproducir = (contenido, progreso = 0) => {
-    // Si viene de "Continuar viendo", usar los datos completos y el progreso
+  const [reproductorWebVisible, setReproductorWebVisible] = useState(false);
+  const [trailerUrl, setTrailerUrl] = useState(null);
+
+  const handleReproducir = async (contenido, progreso = 0) => {
+    const titulo = contenido?.titulo || contenido?.name;
+    // 1) Intentar tráiler manual por título
+    const manual = obtenerTrailerManual(titulo);
+    if (manual) {
+      console.log('🎬 Tráiler manual encontrado para', titulo, '=>', manual);
+      setTrailerUrl(manual);
+      setReproductorWebVisible(true);
+      return;
+    }
+
+    // 2) Fallback: buscar tráiler en YouTube
+    try {
+      const found = await buscarTrailerEnYouTube(titulo, contenido?.año);
+      if (found) {
+        console.log('🔎 Tráiler YouTube encontrado para', titulo, '=>', found);
+        setTrailerUrl(found);
+        setReproductorWebVisible(true);
+        return;
+      }
+    } catch (e) {
+      console.log('❗ Error buscando tráiler en YouTube:', e);
+    }
+
+    // 3) Último recurso: reproductor simulado con progreso si aplica
     if (contenido.datosCompletos) {
       setContenidoReproducir(contenido.datosCompletos);
-      setProgresoInicial(contenido.progreso * 100); // Convertir a porcentaje
-      console.log('▶️ Reproduciendo desde continuar viendo:', contenido.titulo, `${Math.round(contenido.progreso * 100)}%`);
+      setProgresoInicial(contenido.progreso * 100);
+      console.log('▶️ Reproduciendo simulado desde continuar viendo:', titulo, `${Math.round(contenido.progreso * 100)}%`);
     } else {
       setContenidoReproducir(contenido);
       setProgresoInicial(progreso);
@@ -871,6 +901,23 @@ export default function InicioApp({ navigation, route }) {
         contenido={contenidoReproducir}
         progresoInicial={progresoInicial}
       />
+
+      {/* Reproducción real de tráiler: YouTube nativo en iOS/Android; iframe via WebView en web */}
+      {Platform.OS === 'web' ? (
+        <ReproductorWeb
+          visible={reproductorWebVisible}
+          onClose={() => setReproductorWebVisible(false)}
+          url={trailerUrl}
+          titulo={contenidoReproducir?.titulo || contenidoDestacado?.titulo || 'Video'}
+        />
+      ) : (
+        <ReproductorYouTube
+          visible={reproductorWebVisible}
+          onClose={() => setReproductorWebVisible(false)}
+          url={trailerUrl}
+          titulo={contenidoReproducir?.titulo || contenidoDestacado?.titulo || 'Video'}
+        />
+      )}
     </SafeAreaView>
   );
 }

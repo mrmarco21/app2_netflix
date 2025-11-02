@@ -12,7 +12,7 @@ import {
 
 const { width } = Dimensions.get('window');
 
-export default function TemporadasSerie({ temporadas = [], esSerie }) {
+export default function TemporadasSerie({ temporadas = [], esSerie, onReproducirEpisodio }) {
   console.log('TemporadasSerie - Datos recibidos:', { temporadas, esSerie, cantidad: temporadas?.length });
   
   const [temporadaSeleccionada, setTemporadaSeleccionada] = useState(1);
@@ -198,7 +198,14 @@ export default function TemporadasSerie({ temporadas = [], esSerie }) {
 
                   {/* Botones del modal */}
                   <View style={styles.modalBotones}>
-                    <TouchableOpacity style={styles.botonReproducir}>
+                    <TouchableOpacity
+                      style={styles.botonReproducir}
+                      onPress={() => {
+                        if (onReproducirEpisodio && episodioSeleccionado) {
+                          onReproducirEpisodio(episodioSeleccionado);
+                        }
+                      }}
+                    >
                       <Text style={styles.textoBotonReproducir}>▶ Reproducir</Text>
                     </TouchableOpacity>
                     

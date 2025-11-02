@@ -17,27 +17,12 @@ export default function ModalConfiguracion({
 }) {
   const opcionesMenu = [
     {
-      id: 'administrar-perfiles',
-      icono: 'create-outline',
-      titulo: 'Administrar perfiles',
-      onPress: onAdministrarPerfiles
-    },
-    {
-      id: 'configuracion-app',
-      icono: 'settings-outline',
-      titulo: 'Configuración de la app',
-      onPress: () => {
-        onCerrar();
-        // Aquí iría la navegación a configuración
-      }
-    },
-    {
       id: 'cuenta',
       icono: 'person-outline',
       titulo: 'Cuenta',
       onPress: () => {
         onCerrar();
-        // Aquí iría la navegación a cuenta
+        navigation.navigate('Cuenta');
       }
     },
     {
@@ -48,13 +33,6 @@ export default function ModalConfiguracion({
         onCerrar();
         // Aquí iría la navegación a ayuda
       }
-    },
-    {
-      id: 'cerrar-sesion',
-      icono: 'log-out-outline',
-      titulo: 'Cerrar sesión',
-      onPress: onCerrarSesion,
-      esDestructivo: true
     }
   ];
 
