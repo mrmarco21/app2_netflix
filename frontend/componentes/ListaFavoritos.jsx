@@ -138,7 +138,7 @@ export default function ListaFavoritos({ contenido, navigation, onEliminar, carg
     <View style={styles.container}>
       <Text style={styles.titulo}>Series y películas que te gustaron</Text>
       <FlatList
-        data={contenido}
+        data={contenido.slice(0, 5)}
         renderItem={renderItem}
         keyExtractor={(item, index) => {
           // Usar el ID si existe, sino usar el índice como fallback

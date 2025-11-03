@@ -16,14 +16,39 @@ export default function Historial({ navigation }) {
     if (perfilActual?.id) {
       obtenerHistorial(perfilActual.id);
     }
-  }, [perfilActual?.id]);
+  }, [perfilActual?.id, obtenerHistorial]);
+
+
+
+
 
   const handleVerDetalle = (contenido) => {
-    if (contenido.tipo === 'movie') {
-      navigation.navigate('DetallePelicula', { peliculaId: contenido.id_contenido });
-    } else {
-      navigation.navigate('DetalleSerie', { serieId: contenido.id_contenido });
-    }
+    console.log('🎬 Historial navegando con contenido:', contenido);
+    
+    // USAR EL TIPO ORIGINAL DEL HISTORIAL - NO DETECTAR NUEVAMENTE
+    // El tipo ya fue correctamente determinado cuando se guardó en el historial
+    const tipoOriginal = contenido.tipo || 'pelicula';
+    
+    console.log('🎬 Historial - Tipo original guardado:', tipoOriginal);
+
+    // Normalizar el objeto para DetallePelicula (mismo formato que ResultadosBusqueda)
+    const contenidoParaNavegar = {
+      ...contenido,
+      id: contenido.id || contenido.id_contenido,
+      titulo: contenido.titulo || 'Sin título',
+      imagen: contenido.imagen,
+      tipo: tipoOriginal, // MANTENER EL TIPO ORIGINAL
+      // Agregar flag para búsqueda por título
+      searchByTitle: true
+    };
+
+    console.log('🎬 Historial navegando:', {
+      titulo: contenido.titulo,
+      tipoOriginal: tipoOriginal,
+      searchByTitle: true
+    });
+
+    navigation.navigate('DetallePelicula', { pelicula: contenidoParaNavegar });
   };
 
   const handleEliminar = async (id) => {
@@ -147,7 +172,28 @@ export default function Historial({ navigation }) {
                   <View style={styles.metaInfo}>
                     <View style={styles.tipoContainer}>
                       <Text style={styles.tipoTexto}>
-                        {contenido.tipo === 'movie' ? 'Película' : 'Serie'}
+                        {(() => {
+                          // Si el ID es compuesto, extraer el tipo
+                          if (typeof contenido.id_contenido === 'string' && contenido.id_contenido.includes('_')) {
+                            const partes = contenido.id_contenido.split('_');
+                            if (partes.length === 2 && partes[0] === 'tv') {
+                              return 'Serie';
+                            } else if (partes.length === 2 && partes[0] === 'movie') {
+                              return 'Película';
+                            }
+                          }
+                          
+                          // Si el tipo está definido en la base de datos
+                          if (contenido.tipo === 'serie') return 'Serie';
+                          if (contenido.tipo === 'pelicula') return 'Película';
+                          
+                          // Para datos existentes sin tipo, intentar determinar por el título
+                          const titulo = contenido.titulo?.toLowerCase() || '';
+                          const palabrasClavesSerie = ['temporada', 'season', 'episodio', 'episode', 'capítulo', 'investigación criminal', 'navy'];
+                          const esProbablementeSerie = palabrasClavesSerie.some(palabra => titulo.includes(palabra));
+                          
+                          return esProbablementeSerie ? 'Serie' : 'Película';
+                        })()}
                       </Text>
                     </View>
                     <Clock color="#888" size={14} />

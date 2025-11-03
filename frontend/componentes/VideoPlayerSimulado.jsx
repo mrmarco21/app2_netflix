@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { useHistorial } from '../contextos/HistorialContext';
 import { useUsuario } from '../contextos/UsuarioContext';
+import { detectarTipoContenido } from '../utilidades/tipoContenido';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -27,7 +28,9 @@ export default function VideoPlayerSimulado({
   visible, 
   onClose, 
   titulo,
-  pelicula,
+  pelicula, // Desde DetallePelicula
+  contenido, // Desde InicioApp
+  esSerie = false, // Nuevo prop para determinar el tipo correctamente
   progresoInicial = 0 // Nuevo prop para continuar viendo
 }) {
   const { agregarAlHistorial } = useHistorial();
@@ -44,23 +47,53 @@ export default function VideoPlayerSimulado({
 
   // Función para guardar en historial
   const guardarEnHistorial = async (progresoActual) => {
-    if (!perfilActual?.id || !pelicula) return;
+    // Usar pelicula o contenido según lo que esté disponible
+    const datosContenido = pelicula || contenido;
+    if (!perfilActual?.id || !datosContenido) return;
+
+    // Usar la función centralizada para detectar el tipo de contenido
+    const { tipoHistorial, tipoTMDB } = detectarTipoContenido(datosContenido);
+    
+    // Si se pasa explícitamente esSerie, respetarlo (para compatibilidad)
+    let tipoFinal = tipoHistorial;
+    if (esSerie !== undefined) {
+      tipoFinal = esSerie ? 'serie' : 'pelicula';
+      console.log('🎬 VideoPlayerSimulado: Usando tipo explícito pasado como prop:', tipoFinal);
+    } else {
+      console.log('🎬 VideoPlayerSimulado: Tipo detectado automáticamente:', tipoFinal);
+    }
+
+    // Crear ID compuesto para evitar conflictos entre películas y series
+    const tipoTMDBFinal = tipoFinal === 'serie' ? 'tv' : 'movie';
+    const idCompuesto = `${tipoTMDBFinal}_${datosContenido.id}`;
 
     const datosHistorial = {
       idPerfil: perfilActual.id,
-      idContenido: pelicula.id,
-      titulo: titulo || pelicula.title || pelicula.name,
-      tipo: pelicula.first_air_date ? 'serie' : 'pelicula',
-      imagen: pelicula.poster_path,
+      idContenido: idCompuesto, // Usar ID compuesto
+      titulo: titulo || datosContenido.title || datosContenido.name || datosContenido.titulo,
+      tipo: tipoFinal, // Usar el tipo final determinado
+      imagen: datosContenido.poster_path || datosContenido.imagen,
       porcentajeVisto: Math.round(progresoActual),
       tiempoReproducido: tiempoTranscurrido,
       duracionTotal: duracionTotal
     };
 
-    console.log('🎬 Guardando en historial:', datosHistorial.titulo, `${Math.round(progresoActual)}%`);
+    console.log('🎬 [VIDEO_PLAYER] VideoPlayerSimulado guardando en historial:', {
+      fuente: 'VideoPlayerSimulado.jsx',
+      titulo: datosHistorial.titulo,
+      tipo: datosHistorial.tipo,
+      idCompuesto: datosHistorial.idContenido,
+      progreso: `${Math.round(progresoActual)}%`,
+      tipoDetectado: tipoHistorial,
+      tipoFinal: tipoFinal,
+      esSerieProp: esSerie
+    });
     
     try {
-      await agregarAlHistorial(datosHistorial);
+      await agregarAlHistorial({
+        ...datosHistorial,
+        fuente: 'VideoPlayerSimulado' // Identificador de origen
+      });
       setYaGuardadoEnHistorial(true);
     } catch (error) {
       console.error('❌ Error al guardar en historial:', error);

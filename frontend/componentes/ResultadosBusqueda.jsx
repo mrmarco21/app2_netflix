@@ -12,9 +12,11 @@ export default function ResultadosBusqueda({ resultados, textoBusqueda }) {
       ...item,
       id: item.id,
       titulo: item.titulo || item.title || item.name || 'Sin título',
-      imagen: item.imagen || item.poster_url || item.poster_path
-        ? (item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : item.poster_url)
-        : undefined,
+      imagen: item.imagen || 
+              item.poster_url || 
+              (item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : null) ||
+              (item.backdrop_path ? `https://image.tmdb.org/t/p/w300${item.backdrop_path}` : null) ||
+              null,
       tipo: item.tipo === 'tv' ? 'serie' : (item.tipo === 'movie' ? 'pelicula' : (item.tipo || (item.name ? 'serie' : 'pelicula')))
     };
 

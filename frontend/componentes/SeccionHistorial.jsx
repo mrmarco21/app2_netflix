@@ -8,11 +8,40 @@ export default function SeccionHistorial({ historial = [], navigation, cargando 
   };
 
   const handlePressPelicula = (pelicula) => {
-    if (pelicula.tipo === 'movie') {
-      navigation.navigate('DetallePelicula', { peliculaId: pelicula.id_contenido });
-    } else {
-      navigation.navigate('DetalleSerie', { serieId: pelicula.id_contenido });
+    console.log('🎬 SeccionHistorial navegando con contenido:', pelicula);
+    
+    // USAR EL TIPO ORIGINAL DEL HISTORIAL - NO DETECTAR NUEVAMENTE
+    // El tipo ya fue correctamente determinado cuando se guardó en el historial
+    const tipoOriginal = pelicula.tipo || 'pelicula';
+    
+    console.log('🎬 SeccionHistorial - Tipo original guardado:', tipoOriginal);
+
+    // Extraer el ID real del ID compuesto si es necesario
+    let idReal = pelicula.id_contenido;
+    if (typeof pelicula.id_contenido === 'string' && pelicula.id_contenido.includes('_')) {
+      const partes = pelicula.id_contenido.split('_');
+      if (partes.length === 2) {
+        idReal = parseInt(partes[1]);
+      }
     }
+
+    // Crear objeto con el formato correcto para la navegación
+    const contenidoParaNavegar = {
+      id: idReal,
+      titulo: pelicula.titulo,
+      imagen: pelicula.imagen || pelicula.poster,
+      tipo: tipoOriginal, // MANTENER EL TIPO ORIGINAL
+      searchByTitle: true
+    };
+
+    console.log('🎬 SeccionHistorial navegando:', {
+      idOriginal: pelicula.id_contenido,
+      idExtraido: idReal,
+      titulo: pelicula.titulo,
+      tipoOriginal: tipoOriginal
+    });
+
+    navigation.navigate('DetallePelicula', { pelicula: contenidoParaNavegar });
   };
 
   if (cargando) {
@@ -41,7 +70,7 @@ export default function SeccionHistorial({ historial = [], navigation, cargando 
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.titulo}>Historial</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.verMasBoton}
           onPress={handleVerMas}
         >
@@ -49,12 +78,12 @@ export default function SeccionHistorial({ historial = [], navigation, cargando 
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {historial.map((item) => (
+        {historial.slice(0, 5).map((item) => (
           <TouchableOpacity
             key={item.id}
             style={styles.peliculaCard}
@@ -67,23 +96,23 @@ export default function SeccionHistorial({ historial = [], navigation, cargando 
                 resizeMode="cover"
               />
               {/* Barra de progreso */}
-              <View style={styles.progresoContainer}>
+              {/* <View style={styles.progresoContainer}>
                 <View style={styles.progresoBar}>
-                  <View 
+                  <View
                     style={[
-                      styles.progresoFill, 
+                      styles.progresoFill,
                       { width: `${item.porcentaje_visto || 0}%` }
-                    ]} 
+                    ]}
                   />
                 </View>
-              </View>
+              </View> */}
             </View>
-            <Text style={styles.titulo_pelicula} numberOfLines={1}>
+            {/* <Text style={styles.titulo_pelicula} numberOfLines={1}>
               {item.titulo}
             </Text>
             <Text style={styles.progreso_texto} numberOfLines={1}>
               {item.porcentaje_visto || 0}% visto
-            </Text>
+            </Text> */}
           </TouchableOpacity>
         ))}
       </ScrollView>

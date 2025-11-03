@@ -48,6 +48,8 @@ export const HistorialProvider = ({ children }) => {
   const agregarAlHistorial = useCallback(async (datosContenido) => {
     try {
       console.log('➕ Agregando al historial:', datosContenido.titulo);
+      console.log('📤 URL de la API:', `${API_BASE_URL}/historial/agregar`);
+      console.log('📤 Datos enviados:', datosContenido);
 
       const response = await fetch(`${API_BASE_URL}/historial/agregar`, {
         method: 'POST',
@@ -57,22 +59,41 @@ export const HistorialProvider = ({ children }) => {
         body: JSON.stringify(datosContenido),
       });
 
+      console.log('📥 Status de respuesta:', response.status);
+      console.log('📥 Headers de respuesta:', response.headers);
+
+      if (!response.ok) {
+        console.error('❌ Respuesta no OK:', response.status, response.statusText);
+        
+        // Intentar obtener el mensaje de error del servidor
+        try {
+          const errorData = await response.text();
+          console.error('❌ Respuesta del servidor:', errorData);
+        } catch (e) {
+          console.error('❌ No se pudo leer la respuesta de error');
+        }
+        
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('📥 Datos de respuesta:', data);
 
       if (data.success) {
-        console.log('✅ Agregado al historial');
+        console.log('✅ Agregado al historial exitosamente');
         // Actualizar lista local
         if (datosContenido.idPerfil) {
           await obtenerHistorial(datosContenido.idPerfil);
         }
         return true;
       } else {
-        console.error('❌ Error al agregar al historial:', data.mensaje);
-        return false;
+        console.error('❌ Error en respuesta del servidor:', data.mensaje);
+        throw new Error(data.mensaje || 'Error desconocido del servidor');
       }
     } catch (error) {
-      console.error('❌ Error al agregar al historial:', error);
-      return false;
+      console.error('❌ Error completo al agregar al historial:', error);
+      console.error('❌ Stack trace:', error.stack);
+      throw error; // Re-lanzar el error para que se propague
     }
   }, [obtenerHistorial]);
 
